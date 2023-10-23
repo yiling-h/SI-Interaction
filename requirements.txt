@@ -1,0 +1,10 @@
+Cython
+numpy
+scipy
+pandas
+mpmath
+pyinter
+sklearn
+traitlets
+seaborn
+matplotlib
