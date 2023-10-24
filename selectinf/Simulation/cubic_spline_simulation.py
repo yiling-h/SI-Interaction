@@ -5,7 +5,7 @@ import time
 import sys
 
 # For greatlakes simulations
-sys.path.append('/home/yilingh/SI-Graphs')
+sys.path.append('/home/yilingh/SI-Interaction')
 
 from selectinf.group_lasso_query import (group_lasso,
                                          split_group_lasso)
