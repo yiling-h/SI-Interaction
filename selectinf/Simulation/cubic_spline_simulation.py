@@ -20,7 +20,7 @@ from selectinf.Simulation.test_group_lasso_simulation import (calculate_F1_score
 
 
 def comparison_cubic_spline_vary_s(n=2000,
-                                   signal_fac=1,
+                                   signal_fac=0.1,
                                    p_l=0,
                                    s_l=0,
                                    order=3,
@@ -67,14 +67,14 @@ def comparison_cubic_spline_vary_s(n=2000,
                     # MLE inference
                     coverage, length, beta_target, nonzero, conf_low, conf_up = \
                         randomization_inference_fast(X=X, Y=Y, n=n, p=p, proportion=0.67,
-                                                     beta=beta, groups=groups)
+                                                     beta=beta, groups=groups, weight_frac=1)
                     noselection = (coverage is None)
 
                 if not noselection:
                     # data splitting
                     coverage_ds, lengths_ds, conf_low_ds, conf_up_ds, nonzero_ds, beta_target_ds = \
                         data_splitting(X=X, Y=Y, n=n, p=p, beta=beta, groups=groups,
-                                       proportion=0.67, level=0.9)
+                                       proportion=0.67, level=0.9, weight_frac=1)
                     noselection = (coverage_ds is None)
 
                 if not noselection:
@@ -83,7 +83,7 @@ def comparison_cubic_spline_vary_s(n=2000,
                     beta_target_naive = \
                         naive_inference(X=X, Y=Y, groups=groups,
                                         beta=beta, const=const,
-                                        n=n, level=level)
+                                        n=n, level=level, weight_frac=1)
                     noselection = (coverage_naive is None)
 
                 if not noselection:
