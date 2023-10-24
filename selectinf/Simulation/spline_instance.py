@@ -43,6 +43,7 @@ def generate_gaussian_instance(intercept=False,
     beta = np.zeros(design.shape[1])
     if signal_fac is not None:
         signal = np.sqrt(signal_fac * 2 * np.log(design.shape[1]))
+        print(signal)
 
     signal = np.atleast_1d(signal)
 
