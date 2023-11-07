@@ -269,7 +269,11 @@ class group_lasso(gaussian_query):
             randomizer_scale = np.sqrt(mean_diag) * 0.5 * np.std(Y) * np.sqrt(n / (n - 1.))
 
         if cov_rand is None:
-            randomizer = randomization.isotropic_gaussian((p,), randomizer_scale)
+            if randomizer_scale is not None:
+                randomizer = randomization.isotropic_gaussian((p,), randomizer_scale)
+            else:
+                randomizer_scale = np.sqrt(mean_diag) * 0.5 * np.std(Y) * np.sqrt(n / (n - 1.))
+                randomizer = randomization.isotropic_gaussian((p,), randomizer_scale)
         else:
             randomizer = randomization.gaussian(cov_rand)
 

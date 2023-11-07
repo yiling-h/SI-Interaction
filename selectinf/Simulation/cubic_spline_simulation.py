@@ -67,14 +67,14 @@ def comparison_cubic_spline_vary_s(n=2000,
                     # MLE inference
                     coverage, length, beta_target, nonzero, conf_low, conf_up = \
                         randomization_inference_fast(X=X, Y=Y, n=n, p=p, proportion=0.67,
-                                                     beta=beta, groups=groups, weight_frac=1.)
+                                                     beta=beta, groups=groups, weight_frac=1.5)
                     noselection = (coverage is None)
 
                 if not noselection:
                     # data splitting
                     coverage_ds, lengths_ds, conf_low_ds, conf_up_ds, nonzero_ds, beta_target_ds = \
                         data_splitting(X=X, Y=Y, n=n, p=p, beta=beta, groups=groups,
-                                       proportion=0.67, level=0.9, weight_frac=1.)
+                                       proportion=0.67, level=0.9, weight_frac=1.5)
                     noselection = (coverage_ds is None)
 
                 if not noselection:
@@ -83,7 +83,7 @@ def comparison_cubic_spline_vary_s(n=2000,
                     beta_target_naive = \
                         naive_inference(X=X, Y=Y, groups=groups,
                                         beta=beta, const=const,
-                                        n=n, level=level, weight_frac=1.)
+                                        n=n, level=level, weight_frac=1.5)
                     noselection = (coverage_naive is None)
 
                 if not noselection:
@@ -158,8 +158,8 @@ def comparison_cubic_spline_vary_s(n=2000,
 if __name__ == '__main__':
     argv = sys.argv
     ## sys.argv: [something, start, end, p_l, s_l, order, knots]
-    start, end = int(argv[1]), int(argv[2])
-    p_l, s_l, order, nknots = int(argv[3]), int(argv[4]), int(argv[5]), int(argv[6])
+    start, end = 0, 10#int(argv[1]), int(argv[2])
+    p_l, s_l, order, nknots = 0, 0, 3, 5# int(argv[3]), int(argv[4]), int(argv[5]), int(argv[6])
     print("start:", start, ", end:", end)
     comparison_cubic_spline_vary_s(range=range(start, end),
                                    p_l = p_l,

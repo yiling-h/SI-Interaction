@@ -171,7 +171,7 @@ def posterior_inference(X, Y, n, p, beta, groups,
 
     return None, None, None, None, None, None
 def randomization_inference(X, Y, n, p, beta, groups, hess=None,
-                            randomizer_scale=None,
+                            randomizer_scale=None, ridge_term=0.,
                             weight_frac=1.25, level=0.9, solve_only = False):
 
     hess = X.T @ X
@@ -199,7 +199,7 @@ def randomization_inference(X, Y, n, p, beta, groups, hess=None,
                                     groups=groups,
                                     weights=weights,
                                     useJacobian=True,
-                                    randomizer_scale=randomizer_scale)
+                                    randomizer_scale=randomizer_scale, ridge_term=ridge_term)
     else:
         conv = group_lasso.gaussian(X=X,
                                     Y=Y,
