@@ -74,7 +74,7 @@ class group_lasso(gaussian_query):
         active_groups = []  # active group labels
         active_dirs = {}  # dictionary: keys are group labels, values are unit-norm coefficients
         unpenalized = []  # selected groups with no penalty
-        overall = np.ones(self.nfeature, np.bool)  # mask of active features
+        overall = np.ones(self.nfeature, bool)  # mask of active features
         ordered_groups = []  # active group labels sorted by label
         ordered_opt = []  # gamma's ordered by group labels
         ordered_vars = []  # indices "ordered" by sorting group labels
@@ -537,7 +537,7 @@ class split_group_lasso(group_lasso):
             X, y = self.loglike.data
             total_size = n = X.shape[0]
             pi_s = self.proportion_select
-            self._selection_idx = np.zeros(n, np.bool)
+            self._selection_idx = np.zeros(n, bool)
             self._selection_idx[:int(pi_s * n)] = True
             np.random.shuffle(self._selection_idx)
 
