@@ -594,7 +594,7 @@ def one_sim_mode_serial(SNR, intercept_flag, p, oper_char,
             break
 
 def one_sim_mode(idx, SNR, intercept_flag, p,
-                 use_MLE, mode):
+                 use_MLE, mode, weight_frac):
     inst, const = (generate_gaussian_instance_nonlinear_interaction_simple,
                    group_lasso.gaussian)
 
@@ -617,7 +617,7 @@ def one_sim_mode(idx, SNR, intercept_flag, p,
                                        Y_mean=Y_mean, const=const,
                                        n_features=p,
                                        interactions=data_interaction,
-                                       weight_frac=2, level=0.9,
+                                       weight_frac=weight_frac, level=0.9,
                                        intercept=intercept_flag,
                                        proportion=0.5,
                                        mode=mode)
@@ -632,7 +632,7 @@ def one_sim_mode(idx, SNR, intercept_flag, p,
                                         Y_mean=Y_mean, const=const,
                                         n_features=p,
                                         interactions=data_interaction,
-                                        weight_frac=2, level=0.9,
+                                        weight_frac=weight_frac, level=0.9,
                                         intercept=intercept_flag,
                                         mode=mode)
             noselection = (coverages is None)
@@ -643,7 +643,7 @@ def one_sim_mode(idx, SNR, intercept_flag, p,
                                       Y_mean=Y_mean,
                                       n_features=p, interactions=data_interaction,
                                       intercept=intercept_flag,
-                                      weight_frac=2, level=0.9,
+                                      weight_frac=weight_frac, level=0.9,
                                       proportion=0.5, mode=mode)
             noselection = (coverages_MLE is None)
 
