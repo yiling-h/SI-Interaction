@@ -16,7 +16,7 @@ from selectinf.base import (restricted_estimator,
                             _compute_hessian,
                             _pearsonX2)
 
-class group_lasso(gaussian_query):
+class SPAM(gaussian_query):
 
     def __init__(self,
                  loglike,
@@ -139,6 +139,7 @@ class group_lasso(gaussian_query):
         for i, var in enumerate(ordered_vars):
             opt_linearNoU[var, i] += self.ridge_term
 
+        #
         self.observed_score_state = -opt_linearNoU.dot(_beta_unpenalized)
         self.observed_score_state[~overall] += self.loglike.smooth_objective(beta_bar, 'grad')[~overall]
 
@@ -218,6 +219,60 @@ class group_lasso(gaussian_query):
             self._setup_sampler(*self._setup_sampler_data,
                                 dispersion=dispersion)
 
+    def setup_interaction(self, interaction):
+        X, y = self.loglike.data
+        # Interaction-augmented design
+        Psi_aug = np.hstack((X, interaction.reshape(-1, 1)))
+        self.Psi_aug = Psi_aug
+    def _setup_implied_gaussian(self,
+                                opt_linear,
+                                observed_subgrad,
+                                dispersion=1):
+
+        cov_rand, prec = self.randomizer.cov_prec
+
+        X, y = self.loglike.data
+        score_decom_coef_full = self.Psi_aug.T.dot(X)
+        #print("self.Psi_aug.shape",self.Psi_aug.shape)
+        #print("loglike data shape", X.shape)
+
+        if np.asarray(prec).shape in [(), (0,)]:
+            # score_decom_coef_full is previously prod_score_prec_unnorm
+            # In SPAM, this corresponds to (Psi_+)'(Psi) @ prec,
+            # and (Psi)'(Psi_{E+}) is in fact the regression coef.
+            # when projecting score onto the refitted est.
+            decom_coef_prod_prec = score_decom_coef_full * prec
+        else:
+            decom_coef_prod_prec = score_decom_coef_full.dot(prec)
+
+        if np.asarray(prec).shape in [(), (0,)]:
+            cond_precision = opt_linear.T.dot(opt_linear) * prec
+            cond_cov = np.linalg.inv(cond_precision)
+            regress_opt = -cond_cov.dot(opt_linear.T) * prec
+        else:
+            cond_precision = opt_linear.T.dot(prec.dot(opt_linear))
+            cond_cov = np.linalg.inv(cond_precision)
+            regress_opt = -cond_cov.dot(opt_linear.T).dot(prec)
+
+        # regress_opt is regression coefficient of opt onto score + u...
+        cond_mean = regress_opt.dot(self.observed_score_state + observed_subgrad)
+
+        # Remain the same as in LASSO
+        M1 = decom_coef_prod_prec * dispersion
+        M2 = M1.dot(cov_rand).dot(M1.T)
+        M3 = M1.dot(opt_linear.dot(cond_cov).dot(opt_linear.T)).dot(M1.T)
+
+        self.M1 = M1
+        self.M2 = M2
+        self.M3 = M3
+
+        return (cond_mean,
+                cond_cov,
+                cond_precision,
+                M1,
+                M2,
+                M3)
+
     def _solve_randomized_problem(self,
                                   perturb=None,
                                   solve_args={'tol': 1.e-15, 'min_its': 100}):
@@ -277,14 +332,14 @@ class group_lasso(gaussian_query):
         else:
             randomizer = randomization.gaussian(cov_rand)
 
-        return group_lasso(loglike,
-                           groups,
-                           weights,
-                           ridge_term,
-                           randomizer,
-                           useJacobian=useJacobian,
-                           use_lasso=use_lasso,
-                           perturb=perturb)
+        return SPAM(loglike,
+                    groups,
+                    weights,
+                    ridge_term,
+                    randomizer,
+                    useJacobian=useJacobian,
+                    use_lasso=use_lasso,
+                    perturb=perturb)
 
     @staticmethod
     def logistic(X,
@@ -317,14 +372,14 @@ class group_lasso(gaussian_query):
         else:
             randomizer = randomization.gaussian(cov_rand)
 
-        return group_lasso(loglike,
-                           groups,
-                           weights,
-                           ridge_term=ridge_term,
-                           randomizer=randomizer,
-                           useJacobian=useJacobian,
-                           use_lasso=use_lasso,
-                           perturb=perturb)
+        return SPAM(loglike,
+                    groups,
+                    weights,
+                    ridge_term=ridge_term,
+                    randomizer=randomizer,
+                    useJacobian=useJacobian,
+                    use_lasso=use_lasso,
+                    perturb=perturb)
 
     @staticmethod
     def poisson(X,
@@ -356,16 +411,16 @@ class group_lasso(gaussian_query):
         else:
             randomizer = randomization.gaussian(cov_rand)
 
-        return group_lasso(loglike,
-                           groups,
-                           weights,
-                           ridge_term=ridge_term,
-                           randomizer=randomizer,
-                           useJacobian=useJacobian,
-                           use_lasso=use_lasso,
-                           perturb=perturb)
+        return SPAM(loglike,
+                    groups,
+                    weights,
+                    ridge_term=ridge_term,
+                    randomizer=randomizer,
+                    useJacobian=useJacobian,
+                    use_lasso=use_lasso,
+                    perturb=perturb)
 
-class split_group_lasso(group_lasso):
+class split_SPAM(SPAM):
 
     """
     Data split, then group LASSO (i.e. data carving)
@@ -431,9 +486,9 @@ class split_group_lasso(group_lasso):
             solve_args={'tol': 1.e-12, 'min_its': 50},
             perturb=None):
 
-        signs, soln = group_lasso.fit(self,
-                                      solve_args=solve_args,
-                                      perturb=perturb)
+        signs, soln = SPAM.fit(self,
+                               solve_args=solve_args,
+                               perturb=perturb)
 
         # exception if no groups are selected
         if len(self.selection_variable['active_groups']) == 0:
@@ -504,6 +559,7 @@ class split_group_lasso(group_lasso):
         cond_mean = regress_opt.dot(self.observed_score_state + observed_subgrad)
 
         ## probably missing a dispersion in the denominator
+        ## TODO: Not identity anymore. Shape will change and cancellation may not hold
         prod_score_prec_unnorm = np.identity(self.nfeature) / (dispersion * ratio)
 
         ## probably missing a multiplicative factor of ratio
@@ -580,15 +636,15 @@ class split_group_lasso(group_lasso):
                                   quadratic=quadratic)
         n, p = X.shapelasso_jacobian.py
 
-        return split_group_lasso(loglike,
-                                 groups,
-                                 weights,
-                                 proportion_select=proportion,
-                                 cov_rand=cov_rand,
-                                 randomizer=None,
-                                 useJacobian=useJacobian,
-                                 use_lasso=use_lasso,
-                                 perturb=perturb)
+        return split_SPAM(loglike,
+                          groups,
+                          weights,
+                          proportion_select=proportion,
+                          cov_rand=cov_rand,
+                          randomizer=None,
+                          useJacobian=useJacobian,
+                          use_lasso=use_lasso,
+                          perturb=perturb)
 
     @staticmethod
     def logistic(X,
@@ -609,15 +665,15 @@ class split_group_lasso(group_lasso):
                                   quadratic=quadratic)
         n, p = X.shape
 
-        return split_group_lasso(loglike,
-                                 groups,
-                                 weights,
-                                 cov_rand=cov_rand,
-                                 proportion_select=proportion,
-                                 randomizer=None,
-                                 useJacobian=useJacobian,
-                                 use_lasso=use_lasso,
-                                 perturb=perturb)
+        return split_SPAM(loglike,
+                          groups,
+                          weights,
+                          cov_rand=cov_rand,
+                          proportion_select=proportion,
+                          randomizer=None,
+                          useJacobian=useJacobian,
+                          use_lasso=use_lasso,
+                          perturb=perturb)
 
     @staticmethod
     def poisson(X,
@@ -634,15 +690,15 @@ class split_group_lasso(group_lasso):
         n, p = X.shape
         loglike = rr.glm.poisson(X, counts, quadratic=quadratic)
 
-        return split_group_lasso(loglike,
-                                 groups,
-                                 weights,
-                                 cov_rand=cov_rand,
-                                 proportion_select=proportion,
-                                 randomizer=None,
-                                 useJacobian=useJacobian,
-                                 use_lasso=use_lasso,
-                                 perturb=perturb)
+        return split_SPAM(loglike,
+                          groups,
+                          weights,
+                          cov_rand=cov_rand,
+                          proportion_select=proportion,
+                          randomizer=None,
+                          useJacobian=useJacobian,
+                          use_lasso=use_lasso,
+                          perturb=perturb)
 
 def _check_groups(groups):
     """Make sure that the user-specific groups are ok

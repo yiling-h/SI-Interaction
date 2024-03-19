@@ -77,6 +77,67 @@ def randomization_inference_spline(design, Y, n, p, Y_mean, groups,
             nonzero, intervals[:, 0], intervals[:, 1], active_flag
     return None, None, None, None, None, None, None
 
+def randomization_inference_spline_hessian(design, Y, n, p, Y_mean, groups,
+                                           proportion=0.5,
+                                           weight_frac=1.25, level=0.9):
+    hess = design.T @ design * (1 - proportion) / proportion
+
+    sigma_ = np.std(Y)
+    if n > p:
+        dispersion = np.linalg.norm(Y - design.dot(np.linalg.pinv(design).dot(Y))) ** 2 / (n - p)
+    else:
+        dispersion = sigma_ ** 2
+
+    sigma_ = np.sqrt(dispersion)
+
+    weights = dict([(i, weight_frac * sigma_ * np.sqrt(2 * np.log(p))) for i in np.unique(groups)])
+
+    conv = split_group_lasso.gaussian(X=design,
+                                      Y=Y,
+                                      groups=groups,
+                                      weights=weights,
+                                      useJacobian=True,
+                                      proportion=proportion,
+                                      cov_rand=hess)
+
+    signs, _ = conv.fit()
+    nonzero = (signs != 0)
+
+    def solve_target_restricted():
+        loglike = rr.glm.gaussian(design, Y_mean)
+        # For LASSO, this is the OLS solution on X_{E,U}
+        _beta_unpenalized = restricted_estimator(loglike,
+                                                 nonzero)
+        return _beta_unpenalized
+
+    if nonzero.sum() > 0:
+        print("MLE |E|:", nonzero.sum())
+        conv.setup_inference(dispersion=dispersion)
+
+        target_spec = selected_targets(conv.loglike,
+                                       conv.observed_soln,
+                                       dispersion=dispersion)
+
+        result, _ = conv.inference(target_spec,
+                                   method='selective_MLE',
+                                   level=level)
+
+        pval = result['pvalue']
+        intervals = np.asarray(result[['lower_confidence',
+                                       'upper_confidence']])
+
+        beta_target = solve_target_restricted()
+
+        coverage = (beta_target > intervals[:, 0]) * (beta_target < intervals[:, 1])
+
+        selected_groups = conv.selection_variable['active_groups']
+        active_flag = np.zeros(np.unique(groups).shape[0])
+        active_flag[selected_groups] = 1.
+
+        return coverage, (intervals[:, 1] - intervals[:, 0]), beta_target, \
+            nonzero, intervals[:, 0], intervals[:, 1], active_flag
+    return None, None, None, None, None, None, None
+
 def data_splitting_spline(X, Y, n, p, Y_mean, groups, weight_frac=1.25,
                    nonzero=None, subset_select=None,
                    proportion=0.5, level=0.9):
@@ -250,7 +311,7 @@ def comparison_b_spline_vary_cplx(level=0.90, range=range(0,100)):
     oper_char["method"] = []
     oper_char["F1 score"] = []
 
-    for complexity in [(4,1), (6,2), (10,3)]:  # [0.01, 0.03, 0.06, 0.1]:
+    for complexity in [(8,1), (8,2), (8,3)]:#[(12,1), (12,2), (12,3), (12,4), (12,5)]:#[(10,1), (10,2), (10,3), (10,4)]: # # [0.01, 0.03, 0.06, 0.1]:
         nknots = complexity[0]
         degree = complexity[1]
         for i in range:
@@ -260,29 +321,35 @@ def comparison_b_spline_vary_cplx(level=0.90, range=range(0,100)):
 
             while True:  # run until we get some selection
                 design, Y, Y_mean, groups, active_flag = \
-                    generate_gaussian_instance_nonlinear(n=2000, p_nl=10, p_l=20,
+                    generate_gaussian_instance_nonlinear(n=1000, p_nl=100, p_l=0,
                                                          nknots=nknots, degree=degree,
-                                                         center=False, scale=True)
+                                                         center=False, scale=True, signal_fac=0.01,
+                                                         noise_scale=np.sqrt(10))
                 # print(X)
 
                 n, p = design.shape
+                print(n, p)
                 noselection = False  # flag for a certain method having an empty selected set
 
                 if not noselection:
                     # MLE inference
                     coverage, length, beta_target, nonzero, conf_low, conf_up, selected_groups = \
-                        randomization_inference_spline(design=design, Y=Y, n=n, p=p, Y_mean=Y_mean,
-                                                       groups=groups,
-                                                       weight_frac=1.5, level=0.9, ridge_term=0.)
+                        randomization_inference_spline_hessian(design=design, Y=Y, n=n, p=p, Y_mean=Y_mean,
+                                                               groups=groups, weight_frac=1., level=0.9,
+                                                               proportion=0.5)
                     noselection = (coverage is None)
+
+                    #print("MLE beta:", beta_target)
 
                 if not noselection:
                     # data splitting
                     (coverage_ds, lengths_ds, conf_low_ds, conf_up_ds,
                      nonzero_ds, beta_target_ds, selected_groups_ds) = \
                         data_splitting_spline(X=design, Y=Y, n=n, p=p, Y_mean=Y_mean, groups=groups,
-                                              proportion=0.67, level=0.9, weight_frac=1.5)
+                                              proportion=0.5, level=0.9, weight_frac=1.)
                     noselection = (coverage_ds is None)
+
+                    #print("DS beta:", beta_target_ds)
 
                 if not noselection:
                     # naive inference
@@ -291,8 +358,9 @@ def comparison_b_spline_vary_cplx(level=0.90, range=range(0,100)):
                      selected_groups_naive) = \
                         naive_inference_spline(X=design, Y=Y, groups=groups,
                                                Y_mean=Y_mean, const=const,
-                                               n=n, level=level, weight_frac=1.5)
+                                               n=n, level=level, weight_frac=1.)
                     noselection = (coverage_naive is None)
+                    #print("naive beta:", beta_target_naive)
 
                 if not noselection:
                     # F1 scores
@@ -331,11 +399,120 @@ def comparison_b_spline_vary_cplx(level=0.90, range=range(0,100)):
                     break  # Go to next iteration if we have some selection
 
     oper_char_df = pd.DataFrame.from_dict(oper_char)
-    oper_char_df.to_csv('bspline_vary_complexity' + str(range.start) + '_' + str(range.stop) + '.csv', index=False)
+    oper_char_df.to_csv('bspline_vary_complexity_nonlinear' + str(range.start) + '_' + str(range.stop) + '.csv',
+                        index=False)
+
+def comparison_b_spline_vary_SNR(level=0.90, range=range(0,100)):
+    """
+    Compare to R randomized lasso
+    """
+
+    # Operating characteristics
+    oper_char = {}
+    oper_char["complexity"] = []
+    oper_char["SNR"] = []
+    oper_char["coverage rate"] = []
+    oper_char["avg length"] = []
+    oper_char["method"] = []
+    oper_char["F1 score"] = []
+
+    complexity = (8,2)
+    nknots = complexity[0]
+    degree = complexity[1]
+    for SNR in [0.1, 0.3, 0.5, 1, 1.5, 2]:
+        for i in range:
+            print(i)
+            #np.random.seed(i)
+            const = group_lasso.gaussian
+
+            while True:  # run until we get some selection
+                design, Y, Y_mean, groups, active_flag = \
+                    generate_gaussian_instance_nonlinear(n=1000, p_nl=100, p_l=0,
+                                                         nknots=nknots, degree=degree,
+                                                         center=False, scale=True, SNR=SNR)
+                # print(X)
+
+                n, p = design.shape
+                print(n, p)
+                noselection = False  # flag for a certain method having an empty selected set
+
+                if not noselection:
+                    # MLE inference
+                    coverage, length, beta_target, nonzero, conf_low, conf_up, selected_groups = \
+                        randomization_inference_spline_hessian(design=design, Y=Y, n=n, p=p, Y_mean=Y_mean,
+                                                               groups=groups, weight_frac=1., level=0.9,
+                                                               proportion=0.5)
+                    noselection = (coverage is None)
+
+                    #print("MLE beta:", beta_target)
+
+                if not noselection:
+                    # data splitting
+                    (coverage_ds, lengths_ds, conf_low_ds, conf_up_ds,
+                     nonzero_ds, beta_target_ds, selected_groups_ds) = \
+                        data_splitting_spline(X=design, Y=Y, n=n, p=p, Y_mean=Y_mean, groups=groups,
+                                              proportion=0.5, level=0.9, weight_frac=1.)
+                    noselection = (coverage_ds is None)
+
+                    #print("DS beta:", beta_target_ds)
+
+                if not noselection:
+                    # naive inference
+                    (coverage_naive, lengths_naive, nonzero_naive,
+                     conf_low_naive, conf_up_naive, beta_target_naive,
+                     selected_groups_naive) = \
+                        naive_inference_spline(X=design, Y=Y, groups=groups,
+                                               Y_mean=Y_mean, const=const,
+                                               n=n, level=level, weight_frac=1.)
+                    noselection = (coverage_naive is None)
+                    #print("naive beta:", beta_target_naive)
+
+                if not noselection:
+                    # F1 scores
+                    # F1_s = calculate_F1_score(beta, selection=nonzero_s)
+                    F1 = calculate_F1_score(active_flag, selection=selected_groups)
+                    F1_ds = calculate_F1_score(active_flag, selection=selected_groups_ds)
+                    F1_naive = calculate_F1_score(active_flag, selection=selected_groups_naive)
+
+                    # MLE coverage
+                    #oper_char["sparsity size"].append(s_group)
+                    oper_char["complexity"].append("(" + str(nknots) + "," +
+                                                   str(degree) + ")")
+                    oper_char["SNR"].append(SNR)
+                    oper_char["coverage rate"].append(np.mean(coverage))
+                    oper_char["avg length"].append(np.mean(length))
+                    oper_char["F1 score"].append(F1)
+                    oper_char["method"].append('MLE')
+
+                    # Data splitting coverage
+                    #oper_char["sparsity size"].append(s_group)
+                    oper_char["complexity"].append("(" + str(nknots) + "," +
+                                                   str(degree) + ")")
+                    oper_char["SNR"].append(SNR)
+                    oper_char["coverage rate"].append(np.mean(coverage_ds))
+                    oper_char["avg length"].append(np.mean(lengths_ds))
+                    oper_char["F1 score"].append(F1_ds)
+                    oper_char["method"].append('Data splitting')
+
+                    # Naive coverage
+                    #oper_char["sparsity size"].append(s_group)
+                    oper_char["complexity"].append("(" + str(nknots) + "," +
+                                                   str(degree) + ")")
+                    oper_char["SNR"].append(SNR)
+                    oper_char["coverage rate"].append(np.mean(coverage_naive))
+                    oper_char["avg length"].append(np.mean(lengths_naive))
+                    oper_char["F1 score"].append(F1_naive)
+                    oper_char["method"].append('Naive')
+
+                    break  # Go to next iteration if we have some selection
+
+    oper_char_df = pd.DataFrame.from_dict(oper_char)
+    oper_char_df.to_csv('bspline_vary_SNR_nonlinear('+ str(nknots) + ','+ str(degree) + ')_' + str(range.start) + '_' + str(range.stop) + '.csv',
+                        index=False)
 
 if __name__ == '__main__':
     argv = sys.argv
     ## sys.argv: [something, start, end, p_l, s_l, order, knots]
-    start, end = 0, 10#int(argv[1]), int(argv[2])
+    start, end = 0, 30#int(argv[1]), int(argv[2])
     print("start:", start, ", end:", end)
-    comparison_b_spline_vary_cplx(range=range(start, end))
+    comparison_b_spline_vary_SNR(range=range(start, end))

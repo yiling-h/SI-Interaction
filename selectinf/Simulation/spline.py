@@ -146,9 +146,11 @@ class b_spline():
         self.p_1 = data_nl.shape[1]
         self.intercept = intercept
         self.groups = []
+        self.group_sizes = []
         self.degree = degree
         if intercept:
             self.groups.append(0)
+            self.group_sizes.append(1)
 
         # Set knots if knots were given
         if knots is not None:
@@ -166,32 +168,12 @@ class b_spline():
             for i in range(self.p_1):
                 self.nknots[i] = int(nknots)
 
-        # set group indices for derived covariates based on the original covariate
-        for i in range(self.p_1):
-            if self.intercept:
-                self.groups.extend(list(np.array(i+1).repeat(self.nknots[i] - self.degree - 1)))
-            else:
-                self.groups.extend(list(np.array(i).repeat(self.nknots[i] - self.degree - 1)))
-
-        # self.nknots should be assigned value at this point anyways
-        ncol = len(self.groups)
-
-        # If linear parts are given, set linear parts parameters
-        if data_l is not None:
-            prev_groups = np.unique(self.groups).shape[0]
-            self.p_2 = data_l.shape[1]
-            for j in range(self.p_2):
-                self.groups.append(prev_groups+j)
-            ncol = ncol + self.p_2
-
-        self.ncol = int(ncol)
-
     def construct_splines(self, equally_spaced=True, use_quantiles=None,
                           center=True, scale=True, orthogonal=True):
         """
         Constructing splines basis from the original data
         """
-        self.spline_data = np.zeros((self.n, self.ncol))
+        self.spline_data = None
         if self.knots is None and equally_spaced:
             self.knots = {}
             for i in range(self.p_1):
@@ -213,12 +195,18 @@ class b_spline():
         # Setting the spline basis
         col_idx = 0
         if self.intercept:
-            self.spline_data[:, 0] = np.ones((self.n,))
+            self.spline_data = np.ones((self.n,1))
             col_idx = col_idx + 1
         for i in range(self.p_1):
             basis_dim = self.nknots[i] - self.degree - 1
             assert basis_dim > 0
             #print(basis_dim)
+            #print(i)
+            def check_rank_deficient(design, tol=1e-5):
+                ones = np.ones((design.shape[0],))
+                x, residuals, rank, s = np.linalg.lstsq(design, ones, rcond=None)
+                rank_deficient = (np.linalg.norm(residuals) < tol)
+                return rank_deficient
 
             c = np.repeat(0, int(basis_dim))
             #print(self.knots[i])
@@ -237,13 +225,49 @@ class b_spline():
                 design = Q
                 assert (np.allclose(np.dot(Q.T, Q), np.identity(Q.shape[1])))
 
+            if check_rank_deficient(design):
+                #if self.intercept:
+                design = design[:, :-1]
+                basis_dim -= 1
+                assert not check_rank_deficient(design)
+                #elif i != 0:
+                #    design = design[:, :-1]
+                #    basis_dim -= 1
+                #    assert not check_rank_deficient(design)
+
+            if self.spline_data is None:
+                self.spline_data = design
+            else:
+                self.spline_data = np.hstack([self.spline_data, design])
+
             self.spline_data[:, int(col_idx):int(col_idx+basis_dim)] = design
             col_idx = col_idx + basis_dim
+            self.group_sizes.append(basis_dim)
 
         # Attach linear part
         if self.data_l is not None:
             for j in range(self.p_2):
-                self.spline_data[:, int(j + col_idx)] = self.data_l[:, j]
+                self.spline_data = np.hstack([self.spline_data,self.data_l[:, j]])
+
+        # set group indices for derived covariates based on the original covariate
+        for i in range(self.p_1):
+            if self.intercept:
+                self.groups.extend(list(np.array(i + 1).repeat(self.group_sizes[i + 1])))
+            else:
+                self.groups.extend(list(np.array(i).repeat(self.group_sizes[i])))
+
+        # self.nknots should be assigned value at this point anyways
+        ncol = len(self.groups)
+
+        # If linear parts are given, set linear parts parameters
+        if self.data_l is not None:
+            prev_groups = np.unique(self.groups).shape[0]
+            self.p_2 = self.data_l.shape[1]
+            for j in range(self.p_2):
+                self.groups.append(prev_groups + j)
+            ncol = ncol + self.p_2
+
+        self.ncol = int(ncol)
 
     def get_spline_data(self):
         return self.spline_data

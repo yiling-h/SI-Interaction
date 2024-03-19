@@ -1,9 +1,12 @@
+import time
 from typing import NamedTuple
 
 import numpy as np
 
 import regreg.api as rr
 import regreg.affine as ra
+
+import copy
 
 def restricted_estimator(loss, active, solve_args={'min_its':50, 'tol':1.e-10}):
     """
@@ -95,6 +98,75 @@ def selected_targets(loglike,
 
     regress_target_score = np.zeros((cov_target.shape[0], p))
     # regress_target_score = [ (X_E'X_E)^-1  0_{-E} ]
+    regress_target_score[:,features] = cov_target
+
+    return TargetSpec(observed_target,
+                      cov_target * dispersion,
+                      regress_target_score,
+                      alternatives)
+
+def selected_targets_interaction(loglike,
+                                 solution,
+                                 interaction,
+                                 features=None,
+                                 sign_info={},
+                                 dispersion=None,
+                                 solve_args={'tol': 1.e-12, 'min_its': 100},
+                                 leastsq=False):
+
+    p = solution.shape[0]
+    #print("p in sti", p)
+
+    if features is None:
+        features = np.zeros((p + 1,), dtype=bool)
+        features[0:p] = solution != 0
+    features[p] = True # The interaction term is always included
+    #print("features", features)
+
+    X, y = loglike.data
+    n, p = X.shape
+    # Interaction-augmented design
+    Psi_aug = np.hstack((X, interaction.reshape(-1, 1)))
+
+    loglike_aug = copy.deepcopy(loglike)
+    loglike_aug.set_data((Psi_aug, y))
+    #print("Shape of augmented data:", loglike_aug.data[0].shape)
+
+    # OLS solution: \hat\beta_S = (X_E'X_E)^-1 X_E Y
+    if leastsq:
+        Psi_aug_E = Psi_aug[:, features]
+        S = np.linalg.inv(Psi_aug_E.T @ Psi_aug_E)
+        observed_target = S @ Psi_aug_E.T @ y
+    else:
+        observed_target = restricted_estimator(loglike_aug, features, solve_args=solve_args)
+
+    linpred = Psi_aug[:, features].dot(observed_target)
+
+    # Hfeat = _hessian_active = (Psi_+)'(Psi_{E+})
+    # Can be generalized to other link functions
+    Hfeat = Psi_aug.T.dot(Psi_aug[:,features])
+    #print("Hfeat shape", Hfeat.shape)
+    # Qfeat = (Psi_{E+})'(Psi_{E+})
+    Qfeat = Hfeat[features]
+    # cov_target: ((Psi_{E+})'(Psi_{E+}))^-1
+    #             covariance of selected OLS estimator hat{beta_{E_+}}
+    cov_target = np.linalg.inv(Qfeat)
+
+    alternatives = ['twosided'] * features.sum()
+    features_idx = np.arange(p+1)[features]
+
+    for i in range(len(alternatives)):
+        if features_idx[i] in sign_info.keys():
+            alternatives[i] = sign_info[features_idx[i]]
+
+    if dispersion is None:  # use Pearson's X^2
+        dispersion = _pearsonX2(y,
+                                linpred,
+                                loglike_aug,
+                                observed_target.shape[0])
+
+    regress_target_score = np.zeros((cov_target.shape[0], p+1))
+    # regress_target_score = [ ((Psi_{E+})'(Psi_{E+}))^-1  0_{-E} ]
     regress_target_score[:,features] = cov_target
 
     return TargetSpec(observed_target,
