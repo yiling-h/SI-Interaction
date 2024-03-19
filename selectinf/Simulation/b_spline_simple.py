@@ -65,7 +65,7 @@ def interaction_filter_vary_mode(start, end, use_MLE=True, parallel=True,
 
     for mode in ["stronghierarchy", "weakhierarchy", "allpairs"]:
         if parallel:
-            with (Pool(ncores) as pool):
+            with Pool(ncores) as pool:
                 results = pool.map(partial(one_sim_mode, SNR=SNR,
                                            intercept_flag=intercept_flag,
                                            p=p, use_MLE=use_MLE, mode=mode,
@@ -144,7 +144,7 @@ def interaction_filter_vary_SNR(start, end, use_MLE=True, parallel=True,
 
     for SNR in [0.1, 0.5, 1, 2, 5]:
         if parallel:
-            with (Pool(ncores) as pool):
+            with Pool(ncores) as pool:
                 results = pool.map(partial(one_sim_mode, SNR=SNR,
                                            intercept_flag=intercept_flag,
                                            p=p, use_MLE=use_MLE, mode=mode,
