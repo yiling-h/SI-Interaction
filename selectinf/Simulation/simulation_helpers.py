@@ -1,5 +1,7 @@
 import numpy as np
 import scipy.stats
+import sys
+sys.path.append('/home/yilingh/SI-Interaction')
 
 from selectinf.Simulation.spline_instance import generate_gaussian_instance_nonlinear_interaction_simple
 from selectinf.group_lasso_query import group_lasso
@@ -595,6 +597,7 @@ def one_sim_mode_serial(SNR, intercept_flag, p, oper_char,
 
 def one_sim_mode(idx, SNR, intercept_flag, p,
                  use_MLE, mode, weight_frac):
+    np.random.seed(idx)
     inst, const = (generate_gaussian_instance_nonlinear_interaction_simple,
                    group_lasso.gaussian)
 
