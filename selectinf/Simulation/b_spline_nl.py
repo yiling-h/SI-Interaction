@@ -4,7 +4,7 @@ import sys
 
 import pandas as pd
 from simulation_helpers import (one_sim_mode, one_sim_mode_serial,
-                                generate_gaussian_instance_nonlinear_interaction_simple)
+                                generate_gaussian_instance_nonlinear_interaction)
 from multiprocessing import Pool
 
 from functools import partial
@@ -71,7 +71,7 @@ def interaction_filter_vary_SNR(start, end, use_MLE=True, parallel=True,
                                            intercept_flag=intercept_flag,
                                            p=p, use_MLE=use_MLE, mode=mode,
                                            weight_frac=1.5,
-                                           inst=generate_gaussian_instance_nonlinear_interaction_simple,
+                                           inst=generate_gaussian_instance_nonlinear_interaction,
                                            rho=0.5, rho_noise=0.5, full_corr=False),
                                    list(range(start, end)))
             oper_char_list = oper_char_list + results
@@ -99,5 +99,5 @@ if __name__ == '__main__':
 
     oper_char = interaction_filter_vary_SNR(start=start, end=end, ncores=ncores,
                                             use_MLE=True, parallel=True)
-    oper_char.to_csv('bspline_SNR_' + str(start) + '_'
+    oper_char.to_csv('bspline_nl_SNR_' + str(start) + '_'
                      + str(end) + '.csv', index=False)

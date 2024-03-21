@@ -1,6 +1,7 @@
+import sys
+sys.path.append('/home/yilingh/SI-Interaction')
 import time
 import itertools
-import sys
 
 import pandas as pd
 from simulation_helpers import (one_sim_mode, one_sim_mode_serial,
@@ -9,10 +10,9 @@ from multiprocessing import Pool
 
 from functools import partial
 
-sys.path.append('/home/yilingh/SI-Interaction')
 
-def interaction_filter_vary_SNR(start, end, use_MLE=True, parallel=True,
-                                ncores=8):
+def interaction_filter_vary_mode(start, end, use_MLE=True, parallel=True,
+                                 ncores=8):
     """
     Compare to R randomized lasso
     """
@@ -26,9 +26,8 @@ def interaction_filter_vary_SNR(start, end, use_MLE=True, parallel=True,
     oper_char["|G|"] = []
     oper_char["mode"] = []
     oper_char["SNR"] = []
-
     p = 30
-    mode = 'weakhierarchy'
+    SNR = 1
     intercept_flag = True
 
     """
@@ -64,7 +63,7 @@ def interaction_filter_vary_SNR(start, end, use_MLE=True, parallel=True,
     if parallel:
         oper_char_list = []
 
-    for SNR in [0.1, 0.5, 1, 2]:
+    for mode in ["stronghierarchy", "weakhierarchy", "allpairs"]:
         if parallel:
             with Pool(ncores) as pool:
                 results = pool.map(partial(one_sim_mode, SNR=SNR,
@@ -97,7 +96,7 @@ if __name__ == '__main__':
     start, end = int(argv[1]), int(argv[2])
     ncores = int(argv[3])
 
-    oper_char = interaction_filter_vary_SNR(start=start, end=end, ncores=ncores,
-                                            use_MLE=True, parallel=True)
-    oper_char.to_csv('bspline_SNR_' + str(start) + '_'
+    oper_char = interaction_filter_vary_mode(start=start, end=end, ncores=ncores,
+                                             use_MLE=True, parallel=True)
+    oper_char.to_csv('bspline_mode_' + str(start) + '_'
                      + str(end) + '.csv', index=False)
