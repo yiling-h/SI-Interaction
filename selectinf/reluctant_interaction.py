@@ -224,12 +224,21 @@ class SPAM(gaussian_query):
         # Interaction-augmented design
         Psi_aug = np.hstack((X, interaction.reshape(-1, 1)))
         self.Psi_aug = Psi_aug
+
+    def setup_parallelization(self):
+        cov_rand, prec = self.randomizer.cov_prec
+        self.cov_rand = cov_rand
+        self.prec = prec
+        self.randomizer = None
     def _setup_implied_gaussian(self,
                                 opt_linear,
                                 observed_subgrad,
                                 dispersion=1):
-
-        cov_rand, prec = self.randomizer.cov_prec
+        if self.randomizer is not None:
+            cov_rand, prec = self.randomizer.cov_prec
+        else:
+            cov_rand = self.cov_rand
+            prec = self.prec
 
         X, y = self.loglike.data
         score_decom_coef_full = self.Psi_aug.T.dot(X)

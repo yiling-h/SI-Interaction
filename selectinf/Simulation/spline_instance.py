@@ -421,6 +421,7 @@ def generate_gaussian_instance_from_bspline_interaction(n=2000, p_nl=10, p_l=90,
 
 def generate_gaussian_instance_nonlinear_interaction(n=2000, p_nl=10, p_l=90,
                                                     s_l = 10, rho=0.3, rho_noise=0.,
+                                                     full_corr=False,
                                                     nknots = 6, degree = 2,
                                                     SNR = 1,
                                                     center=False, scale=True,
@@ -465,7 +466,7 @@ def generate_gaussian_instance_nonlinear_interaction(n=2000, p_nl=10, p_l=90,
     else:
         data_linear = None
 
-    data_nonlinear = np.zeros((n,p_nl))#np.random.uniform(low = 0, high = 1, size = (n, p_nl))
+    #np.random.uniform(low = 0, high = 1, size = (n, p_nl))
     # data_nonlinear[:,0:3] = np.random.uniform(low=-2.5, high=2.5, size=(n, 3))
     """
     data_nonlinear[:, 0:3] = sample_correlated_uniforms(n=n, k=3, rho=rho) * 2.5
@@ -474,7 +475,14 @@ def generate_gaussian_instance_nonlinear_interaction(n=2000, p_nl=10, p_l=90,
     data_nonlinear[:, 3:10] = sample_correlated_uniforms(n=n, k=7, rho=rho)
     data_nonlinear[:, 10:] = sample_correlated_uniforms(n=n, k=p_nl - 10, rho=rho_noise)
     """
-    data_nonlinear = sample_correlated_uniforms(n=n, k=p_nl, rho=rho_noise)
+    if full_corr:
+        data_nonlinear = sample_correlated_uniforms(n=n, k=p_nl, rho=rho)
+    else:
+        data_nonlinear = np.zeros((n, p_nl))
+        data_nonlinear[:, 0:3] = sample_correlated_uniforms(n=n, k=3, rho=rho) * 2.5
+        data_nonlinear[:, 3:10] = sample_correlated_uniforms(n=n, k=7, rho=rho)
+        data_nonlinear[:, 10:] = sample_correlated_uniforms(n=n, k=p_nl - 10, rho=rho_noise)
+
 
     bs = b_spline(data_nl=data_nonlinear, data_l=data_linear, nknots=nknots, degree=degree,
                   intercept=intercept)
