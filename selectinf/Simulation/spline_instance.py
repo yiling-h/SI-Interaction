@@ -409,10 +409,14 @@ def generate_gaussian_instance_from_bspline_interaction(n=2000, p_nl=10, p_l=90,
 
     Y_mean = design.dot(beta) + interaction_proj
 
-    noise_sd = (np.sqrt(np.linalg.norm(design.dot(beta))**2 +
-                        np.linalg.norm(interaction_proj)**2) /
-                np.sqrt(n * SNR))
-    print("noise_sd:", noise_sd)
+    if SNR == 0:
+        Y_mean = np.zeros((n,))
+        noise_sd = 1
+    else:
+        noise_sd = (np.sqrt(np.linalg.norm(design.dot(beta)) ** 2 +
+                            np.linalg.norm(interaction_proj) ** 2) /
+                    np.sqrt(n * SNR))
+        print("noise_sd:", noise_sd)
 
     Y = Y_mean + np.random.normal(size=(n,), scale=noise_sd)
 
@@ -574,9 +578,9 @@ def generate_gaussian_instance_nonlinear_interaction(n=2000, p_nl=10, p_l=90,
     return (design, data_interaction, Y, Y_mean, data_combined,
             groups, active, active_inter_adj, active_inter_list)
 
-def generate_gaussian_instance_nonlinear_interaction_simple(n=2000, p_nl=10, p_l=90,
+def generate_gaussian_instance_nonlinear_interaction_block(n=2000, p_nl=10, p_l=90,
                                                     s_l = 10, rho=0.3, rho_noise=0.,
-                                                            full_corr=True,
+                                                     full_corr=False,
                                                     nknots = 6, degree = 2,
                                                     SNR = 1,
                                                     center=False, scale=True,
@@ -623,19 +627,20 @@ def generate_gaussian_instance_nonlinear_interaction_simple(n=2000, p_nl=10, p_l
 
     #np.random.uniform(low = 0, high = 1, size = (n, p_nl))
     # data_nonlinear[:,0:3] = np.random.uniform(low=-2.5, high=2.5, size=(n, 3))
-    # print(np.corrcoef(data_nonlinear[:, 0:3].T))
+    """
+    data_nonlinear[:, 0:3] = sample_correlated_uniforms(n=n, k=3, rho=rho) * 2.5
+    print(np.corrcoef(data_nonlinear[:, 0:3].T))
     # data_nonlinear[:,3:] = np.random.uniform(low = 0, high = 1, size = (n, p_nl-3))
-    if full_corr:
-        data_nonlinear = sample_correlated_uniforms(n=n, k=p_nl, rho=rho)
-        data_nonlinear[:, 0:3] *= 2.5
-    else:
-        data_nonlinear = np.zeros((n, p_nl))
-        data_nonlinear[:, 0:3] = sample_correlated_uniforms(n=n, k=3, rho=rho) * 2.5
-        data_nonlinear[:, 3:] = sample_correlated_uniforms(n=n, k=p_nl - 3, rho=rho_noise)
+    data_nonlinear[:, 3:10] = sample_correlated_uniforms(n=n, k=7, rho=rho)
+    data_nonlinear[:, 10:] = sample_correlated_uniforms(n=n, k=p_nl - 10, rho=rho_noise)
+    """
 
-    """data_nonlinear = np.random.uniform(low=-2.5,
-                                      high=2.5,
-                                      size=(n, p_nl))"""
+    corr_smpl = sample_correlated_uniforms(n=n, k=p_nl-7, rho=rho)
+    data_nonlinear = np.zeros((n, p_nl))
+    data_nonlinear[:, 0:3] = corr_smpl[:, 0:3] * 2.5
+    data_nonlinear[:, 3:10] = sample_correlated_uniforms(n=n, k=7, rho=rho)
+    data_nonlinear[:, 10:] = corr_smpl[:, 3:]
+
 
     bs = b_spline(data_nl=data_nonlinear, data_l=data_linear, nknots=nknots, degree=degree,
                   intercept=intercept)
@@ -646,7 +651,7 @@ def generate_gaussian_instance_nonlinear_interaction_simple(n=2000, p_nl=10, p_l
 
     # Assigning active groups
     # Assuming no active linear covariates
-    group_active = np.array(range(3 + intercept))
+    group_active = np.array(range(10 + intercept))
     active = np.isin(groups, group_active)
 
     # Generating sparse interactions
@@ -726,6 +731,212 @@ def generate_gaussian_instance_nonlinear_interaction_simple(n=2000, p_nl=10, p_l
 
     return (design, data_interaction, Y, Y_mean, data_combined,
             groups, active, active_inter_adj, active_inter_list)
+def generate_gaussian_instance_nonlinear_interaction_simple\
+                (n=2000, p_nl=10, p_l=0, s_l = 10, rho=0.3, rho_noise=0.,
+                 full_corr=True, block_corr=True, rho_cross=0.,
+                 nknots = 6, degree = 2, SNR = 1,
+                 center=False, scale=True, random_signs=True, intercept=True,
+                 structure='allpairs', s_interaction=10, active_inter_list=None,
+                 interaction_signal=1., main_signal=1., noise_sd=None,
+                 return_gamma=False):
+
+    """
+    Returns:
+
+    """
+
+    def sample_correlated_uniforms(n, k, rho):
+        """
+        Sample n instances of k correlated uniform variables.
+
+        Parameters:
+        - n: int, number of samples.
+        - k: int, number of variables.
+        - R: array-like, k x k correlation matrix.
+
+        Returns:
+        - samples: n x k array of samples from correlated uniform distributions.
+        """
+        R = (1-rho)*np.eye(k)
+        R += rho
+
+        # Mean vector for the multivariate normal distribution
+        mean = np.zeros(k)
+
+        # Generate samples from the multivariate normal distribution
+        normal_samples = np.random.multivariate_normal(mean, R, size=n)
+
+        # Transform to uniform samples using the CDF of the normal distribution
+        uniform_samples = norm.cdf(normal_samples)
+
+        return uniform_samples
+
+    def sample_block_correlated_uniforms(n, k1, k2, rho1, rho2, rho_cross):
+        """
+        Sample n instances of k correlated uniform variables.
+
+        Parameters:
+        - n: int, number of samples.
+        - k: int, number of variables.
+        - R: array-like, k x k correlation matrix.
+
+        Returns:
+        - samples: n x k array of samples from correlated uniform distributions.
+        """
+        p = k1 + k2
+        R_full = np.ones((p, p)) * rho_cross
+
+        R1 = (1 - rho1) * np.eye(k1)
+        R1 += rho1
+        R2 = (1 - rho2) * np.eye(k2)
+        R2 += rho2
+
+        R_full[0:k1, 0:k1] = R1
+        R_full[k1:p, k1:p] = R2
+
+        # Mean vector for the multivariate normal distribution
+        mean = np.zeros(p)
+
+        # Generate samples from the multivariate normal distribution
+        normal_samples = np.random.multivariate_normal(mean, R_full, size=n)
+
+        # Transform to uniform samples using the CDF of the normal distribution
+        uniform_samples = norm.cdf(normal_samples)
+
+        return uniform_samples
+
+    #y = 2 sin(2x1) + x2^2 + exp(−x3) + x4 − 3x5 + 2.5x6 + 10x7 + 2x8 − 7x9 + 5x10
+    if p_l > 0:
+        data_linear = np.random.uniform(low = 0, high = 1, size = (n, p_l))
+    else:
+        data_linear = None
+
+    #np.random.uniform(low = 0, high = 1, size = (n, p_nl))
+    # data_nonlinear[:,0:3] = np.random.uniform(low=-2.5, high=2.5, size=(n, 3))
+    # print(np.corrcoef(data_nonlinear[:, 0:3].T))
+    # data_nonlinear[:,3:] = np.random.uniform(low = 0, high = 1, size = (n, p_nl-3))
+    if full_corr:
+        data_nonlinear = sample_correlated_uniforms(n=n, k=p_nl, rho=rho)
+        data_nonlinear[:, 0:3] *= 2.5
+    elif block_corr:
+        data_nonlinear = sample_block_correlated_uniforms(n=n, k1=3, k2=p_nl-3,
+                                                          rho1=rho, rho2=rho_noise,
+                                                          rho_cross=rho_cross)
+    else:
+        data_nonlinear = np.zeros((n, p_nl))
+        data_nonlinear[:, 0:3] = sample_correlated_uniforms(n=n, k=3, rho=rho) * 2.5
+        data_nonlinear[:, 3:] = sample_correlated_uniforms(n=n, k=p_nl - 3, rho=rho_noise)
+
+    """data_nonlinear = np.random.uniform(low=-2.5,
+                                      high=2.5,
+                                      size=(n, p_nl))"""
+
+    bs = b_spline(data_nl=data_nonlinear, data_l=data_linear, nknots=nknots, degree=degree,
+                  intercept=intercept)
+    bs.construct_splines(use_quantiles=True, equally_spaced=False, center=center)
+    design = bs.get_spline_data()
+    # Returning group labels with 0 meaning the intercept (if applicable)
+    groups = bs.get_groups()
+
+    # Assigning active groups
+    # Assuming no active linear covariates
+    group_active = np.array(range(3 + intercept))
+    active = np.isin(groups, group_active)
+
+    # Generating sparse interactions
+    if p_l > 0:
+        data_combined = np.concatenate((data_nonlinear, data_linear), axis=1)
+    else:
+        data_combined = data_nonlinear
+    p = p_l + p_nl
+
+    if active_inter_list is None:
+        if structure == 'allpairs':
+            # sample interactions without replacement
+            active_inter_adj, active_inter_list  = sample_interaction_pairs(p, s_interaction)
+        elif structure == 'weakhierarchy':
+            # sample interactions without replacement
+            active_inter_adj, active_inter_list\
+                = sample_interaction_pairs_hierarchy(p, s_interaction,
+                                                     active_idx=group_active,
+                                                     mode=structure, intercept=intercept)
+        elif structure == 'stronghierarchy':
+            # sample interactions without replacement
+            active_inter_adj, active_inter_list \
+                = sample_interaction_pairs_hierarchy(p, s_interaction,
+                                                     active_idx=group_active,
+                                                     mode=structure, intercept=intercept)
+    else:
+        s_interaction = (active_inter_list).shape[0]
+        active_inter_adj = None
+
+    data_interaction = {}
+    for i in range(p):
+        for j in range(i+1, p):
+            data_interaction[(i,j)] = data_combined[:,i] * data_combined[:,j]
+            if center:
+                data_interaction[(i,j)] = data_interaction[(i,j)] - np.mean(data_interaction[(i,j)])
+            if scale:
+                scaling = np.std(data_interaction[(i,j)]) * np.sqrt(n)
+                data_interaction[(i, j)] = data_interaction[(i,j)] / scaling
+
+    gamma = np.ones((s_interaction,)) * interaction_signal
+    # gamma /= np.sqrt(n) # Uncomment after debugging
+
+    if center:
+        design -= design.mean(0)[None, :]
+
+    if scale:
+        # ----SCALE----
+        # scales X by sqrt(n) and sd
+        # if we need original X, uncomment the following line
+        # X_raw = X
+        # ----SCALE----
+        scaling = design.std(0) * np.sqrt(n)
+        if intercept:
+            scaling[0] = np.sqrt(n)
+        design /= scaling[None, :]
+        gamma *= np.sqrt(n)
+
+    # interaction * gamma
+    interaction_proj = np.zeros((n,))
+    # Construct (dense) design of interactions:
+    for i in range(active_inter_list.shape[0]):
+        pair = active_inter_list[i]
+        interaction_proj += data_interaction[(pair[0], pair[1])] * gamma[i]
+
+    Y_mean_main = (2*np.sin(2*data_nonlinear[:,0]) + data_nonlinear[:,1]**2 + np.exp(-data_nonlinear[:,2]))
+              # + data_nonlinear[:,3] - 3*data_nonlinear[:,4] + 2.5*data_nonlinear[:,5] + 10*data_nonlinear[:,6]
+              # + 2*data_nonlinear[:,7] - 7*data_nonlinear[:,8] + 5*data_nonlinear[:,9])
+    if scale:
+        Y_mean_main /= np.sqrt(n)
+
+    #print("noise_sd:", noise_sd)
+
+    Y_mean = Y_mean_main * main_signal + interaction_proj
+    print("Main:", np.std(Y_mean_main * main_signal))
+    print("Interaction:", np.std(interaction_proj))
+
+    if SNR == 0:
+        Y_mean = np.zeros((n,))
+        noise_sd = 1
+    elif noise_sd is None:
+        noise_sd = (np.std(Y_mean) / np.sqrt(SNR))
+        # print(noise_sd)
+
+    if noise_sd is not None:
+        induced_SNR = (np.std(Y_mean) / noise_sd) ** 2
+        print("induced SNR:", induced_SNR)
+
+    Y = Y_mean + np.random.normal(size=(n,), scale=noise_sd)
+
+    #print("main effects:", np.linalg.norm(Y_mean_main))
+    #print("interaction:", np.linalg.norm(interaction_proj))
+    if return_gamma:
+        return (design, data_interaction, Y, Y_mean, data_combined,
+                groups, active, active_inter_adj, active_inter_list, gamma[0])
+    return (design, data_interaction, Y, Y_mean, data_combined,
+            groups, active, active_inter_adj, active_inter_list, None)
 
 
 _cov_cache = {}
@@ -951,7 +1162,7 @@ def gaussian_group_polynomial_interaction_instance(n=500, p=200, s=7, rho=0., or
                                                    scale=True, center=True,
                                                    equicorrelated=True,
                                                    structure=None, s_interaction=0,
-                                                   intercept=False):
+                                                   intercept=False, return_gamma=False):
     """
     A testing instance for the LASSO.
     If equicorrelated is True design is equi-correlated in the population,
@@ -1036,7 +1247,9 @@ def gaussian_group_polynomial_interaction_instance(n=500, p=200, s=7, rho=0., or
         groups = list(np.arange(p).repeat(order))
     groups = np.array(groups)
     # Assigning active groups
-    group_active = np.random.choice(np.arange(intercept, p + intercept), s, replace=False)
+    # group_active = np.random.choice(np.arange(intercept, p + intercept), s, replace=False)
+    group_active = np.arange(intercept, s + intercept) # First s groups being active
+
     active = np.isin(groups, group_active)
 
     if full_corr:
@@ -1135,11 +1348,19 @@ def gaussian_group_polynomial_interaction_instance(n=500, p=200, s=7, rho=0., or
 
     Y_mean = design.dot(beta) + interaction_proj
 
-    noise_sd = (np.std(design.dot(beta) + interaction_proj) /
-                np.sqrt(SNR))
-    print("noise_sd:", noise_sd)
+    if SNR == 0:
+        Y_mean = np.zeros((n,))
+        noise_sd = 1
+    else:
+        noise_sd = (np.sqrt(np.linalg.norm(design.dot(beta)) ** 2 +
+                            np.linalg.norm(interaction_proj) ** 2) /
+                    np.sqrt(n * SNR))
+        print("noise_sd:", noise_sd)
 
     Y = Y_mean + np.random.normal(size=(n,), scale=noise_sd)
 
+    if return_gamma:
+        return (design, data_interaction, Y, Y_mean, X,
+                active, active_inter_adj, active_inter_list, groups, gamma[0])
     return (design, data_interaction, Y, Y_mean, X,
-            active, active_inter_adj, active_inter_list, groups)
+            active, active_inter_adj, active_inter_list, groups, None)

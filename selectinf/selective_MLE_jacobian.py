@@ -130,7 +130,8 @@ class mle_inference(object):
                                'alternative': alternatives,
                                'lower_confidence': intervals[:, 0],
                                'upper_confidence': intervals[:, 1],
-                               'unbiased': unbiased_estimator})
+                               'unbiased': unbiased_estimator,
+                               'pivot':cdf_vals})
 
         return result, observed_info_mean, log_ref
 
@@ -206,7 +207,7 @@ def solve_barrier_affine_jacobian_py(conjugate_arg,
             if np.all(con_offset - con_linear.dot(proposal) > 0):
                 break
             step *= 0.5
-            if count >= 40:
+            if count >= 100:
                 raise ValueError('not finding a feasible point')
         # make sure proposal is a descent
 
