@@ -223,7 +223,7 @@ def interaction_t_tests_all_parallel(X_E, Y, Y_mean, n_features, active_vars_fla
         p_value_list = np.array(results)[:, 3]
         target_list = np.array(np.array(results)[:, 4])
         return (np.array(coverage_list), np.array(length_list),
-                selected_interactions, p_value_list, target_list)
+                selected_interactions, p_value_list.tolist(), target_list)
 
     target_list = np.array(np.array(results)[:, 3])
     return (np.array(coverage_list), np.array(length_list),
@@ -355,9 +355,9 @@ def naive_inference_inter(X, Y, groups, Y_mean, const,
                                               target_ids=target_ids)
         #print("Naive Selection Size:", len(selected_interactions))
         if not p_val:
-            return coverages, lengths, selected_interactions, targets, task_idx
+            return coverages, lengths, selected_interactions, targets, task_idx#target_ids
         else:
-            return coverages, lengths, selected_interactions, p_values, targets, task_idx
+            return coverages, lengths, selected_interactions, p_values, targets, task_idx#target_ids
     if not p_val:
         return None, None, None, None, None
     else:
@@ -516,9 +516,9 @@ def data_splitting_inter(X, Y, groups, Y_mean, const,
 
         #print("DS Selection Size:", len(selected_interactions))
         if not p_val:
-            return coverages, lengths, selected_interactions, targets, task_idx
+            return coverages, lengths, selected_interactions, targets, task_idx#target_ids
         else:
-            return coverages, lengths, selected_interactions, p_values, targets, task_idx
+            return coverages, lengths, selected_interactions, p_values, targets, task_idx#target_ids
 
     if not p_val:
         return None, None, None, None, None
@@ -714,7 +714,7 @@ def interaction_selective_tests_all_parallel(conv, dispersion,
     if p_val:
         p_values = np.array(results)[:, 3]
         return (np.array(coverage_list), np.array(length_list),
-                selected_interactions, p_values, target_list)
+                selected_interactions, p_values.tolist(), target_list)
 
     return (np.array(coverage_list), np.array(length_list),
             selected_interactions, target_list)
@@ -858,8 +858,8 @@ def MLE_inference_inter(X, Y, Y_mean, groups,
                                                       target_ids=target_ids)
 
         if not p_val:
-            return coverages, lengths, selected_interactions, targets, task_idx
-        return coverages, lengths, selected_interactions, p_values, targets, task_idx
+            return coverages, lengths, selected_interactions, targets, task_idx#target_ids
+        return coverages, lengths, selected_interactions, p_values, targets, task_idx#target_ids
 
     if not p_val:
         return None, None, None, None, None
