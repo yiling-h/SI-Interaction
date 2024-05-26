@@ -9,16 +9,23 @@ if __name__ == '__main__':
     script_directory = os.path.dirname(os.path.abspath(__file__))
     # Change the working directory to the script's directory
     os.chdir(script_directory)
-    #argv = sys.argv
-    ## sys.argv: [something, start, end, p_l, s_l, order, knots]
-    #start, end = 0, 30#int(argv[1]), int(argv[2])
-    #print("start:", start, ", end:", end)
     current_directory = os.getcwd()
     print("Current Working Directory:", current_directory)
 
-    args = [(i * 2, (i + 1) * 2) for i in range(4)]
-    with mp.Pool(processes=4) as pool:
+    argv = sys.argv
+    ## sys.argv: [something, start, end, ncores]
+    start, end = int(argv[1]), int(argv[2])
+    ncores = int(argv[3])
+    #start, end, ncores = 0, 7, 4
+    sim_per_process = int((end - start + 1) / ncores)
+    print("start:", start, ", end:", end)
+    print('nsim per process:', sim_per_process)
+
+    # 2 sim per process, 4 processes in total
+    args = [(start + i * sim_per_process,
+             start + (i + 1) * sim_per_process) for i in range(ncores)]
+    with mp.Pool(processes=ncores) as pool:
         results = pool.starmap(vary_SNR, args)
 
-    dir = 'Results/SNR/results.pkl'
+    dir = 'Results/SNR/results' + str(start) + '_' + str(end) + '.pkl'
     joblib.dump(results, dir)
