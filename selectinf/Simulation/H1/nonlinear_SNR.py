@@ -1,5 +1,8 @@
 import time, sys, joblib, os
-sys.path.append('/home/yilingh/SI-Interaction')
+# Get the script's directory
+script_directory = os.path.dirname(os.path.abspath(__file__))
+# Change the working directory to the script's directory
+os.chdir(script_directory)
 import multiprocessing as mp
 
 from selectinf.Simulation.H1.nonlinear_H1_helpers import *
