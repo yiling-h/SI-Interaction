@@ -1,13 +1,14 @@
 import time, sys, joblib, os
-# Get the script's directory
-script_directory = os.path.dirname(os.path.abspath(__file__))
-# Change the working directory to the script's directory
-os.chdir(script_directory)
+sys.path.append('/home/yilingh/SI-Interaction')
 import multiprocessing as mp
 
 from selectinf.Simulation.H1.nonlinear_H1_helpers import *
 
 if __name__ == '__main__':
+    # Get the script's directory
+    script_directory = os.path.dirname(os.path.abspath(__file__))
+    # Change the working directory to the script's directory
+    os.chdir(script_directory)
     #argv = sys.argv
     ## sys.argv: [something, start, end, p_l, s_l, order, knots]
     #start, end = 0, 30#int(argv[1]), int(argv[2])
