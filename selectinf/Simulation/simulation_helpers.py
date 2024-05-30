@@ -765,7 +765,7 @@ def MLE_inference_inter(X, Y, Y_mean, groups,
         prop_scalar = (1 - proportion) / proportion
 
         mean_diag = np.mean((X ** 2).sum(0))
-        randomizer_scale = np.sqrt(mean_diag) * np.std(Y) * 2
+        randomizer_scale = np.sqrt(mean_diag) * np.std(Y) * 1.
 
         conv = const(X=X,
                      Y=Y,

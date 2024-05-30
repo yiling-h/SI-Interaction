@@ -25,7 +25,14 @@ def update_targets(dict, true_inter_list,
                    targets, parameter, method, idx):
     i = 0
     for id in idx:
-        if id in true_inter_list:
+        if true_inter_list is not None:
+            if id in true_inter_list:
+                dict["parameter"].append(parameter)
+                dict["target"].append(targets[i])
+                dict["target id"].append(str(id))
+                dict["method"].append(method)
+                i += 1
+        else:
             dict["parameter"].append(parameter)
             dict["target"].append(targets[i])
             dict["target id"].append(str(id))
@@ -155,7 +162,7 @@ def vary_SNR(start=0, end=100):
                     pval_dict[SNR]['Naive'] += (p_values)
                     oper_char["power"].append(calculate_power(p_values, targets, 0.1))
                     update_targets(dict=target_dict,
-                                   true_inter_list=active_inter_list_true_list,
+                                   true_inter_list=None,
                                    targets=targets, parameter=SNR,
                                    method="Naive", idx=idx)
 
@@ -169,7 +176,7 @@ def vary_SNR(start=0, end=100):
                     pval_dict[SNR]['Data Splitting'] += (p_values_ds)
                     oper_char["power"].append(calculate_power(p_values_ds, targets_ds, 0.1))
                     update_targets(dict=target_dict,
-                                   true_inter_list=active_inter_list_true_list,
+                                   true_inter_list=None,
                                    targets=targets_ds, parameter=SNR,
                                    method="Data Splitting", idx=idx_ds)
 
@@ -185,7 +192,7 @@ def vary_SNR(start=0, end=100):
                                                               targets_MLE,
                                                               0.1))
                     update_targets(dict=target_dict,
-                                   true_inter_list=active_inter_list_true_list,
+                                   true_inter_list=None,
                                    targets=targets_MLE, parameter=SNR,
                                    method="MLE", idx=idx_MLE)
 
