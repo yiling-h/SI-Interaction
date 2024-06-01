@@ -27,5 +27,5 @@ if __name__ == '__main__':
     with mp.Pool(processes=ncores) as pool:
         results = pool.starmap(vary_main_fix_total, args)
 
-    dir = 'Results/main/results' + str(start) + '_' + str(end) + '_wh.pkl'
+    dir = 'Results/main_fix_total/results' + str(start) + '_' + str(end) + '_wh.pkl'
     joblib.dump(results, dir)
