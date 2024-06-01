@@ -629,7 +629,6 @@ def vary_main_fix_total(start=0, end=100):
                     oper_char["signal"].append(sig)
                     oper_char["rho"].append(rho)
                     oper_char["SNR"].append(SNR)
-                    oper_char["target"].append(targets[0])
                     pval_dict[sig]['Naive'] += (p_values)
                     update_targets(dict=target_dict,
                                    true_inter_list=None,
