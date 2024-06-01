@@ -199,6 +199,474 @@ def vary_SNR(start=0, end=100):
                     break
     return oper_char, pval_dict, target_dict
 
+def vary_main(start=0, end=100):
+    # A dictionary recording simulation results and metrics
+    oper_char = {}
+    oper_char["coverage rate"] = []
+    oper_char["avg length"] = []
+    oper_char["method"] = []
+    oper_char["rho"] = []
+    oper_char["signal"] = []
+    oper_char["main signal"] = []
+    oper_char["power"] = []
+
+    # Dictionary of projected targets, over all simulation parameters
+    target_dict = {}
+    target_dict["parameter"] = []
+    target_dict["target"] = []
+    target_dict["target id"] = []
+    target_dict["method"] = []
+
+    # A dictionary recording p-values for each true interaction
+    # over all simulation results.
+    # Each simulation parameter (here parameter_list contain a list of main signal strengths
+    # to be considered) has a corresponding dictionary of results
+    parameter_list = [10, 5, 2, 1]
+    pval_dict = {}
+    for x in parameter_list:
+        pval_dict[x] = {}
+        for m in ['Naive', 'Data Splitting', 'MLE']:
+            pval_dict[x][m] = []
+
+    # Group lasso solver constructor
+    const = group_lasso.gaussian
+    active_inter_list_true = np.array([[0, 1], [1, 2], [2, 4], [1, 5], [2, 6]])
+    active_inter_list_true_list = [(x[0], x[1]) for x in active_inter_list_true]
+
+    # p = 50
+    rho = 0.5  # Correlation of signal covariates (amongst themselves), and noise.
+    sig = 0.05  # Controlling interaction vs main signals.
+    # Setting it this way generates comparable main
+    # and interaction signals
+    weights = 2  # Group Lasso weights
+    s_inter = 5  # Number of true interactions
+    p_nl = 20  # Number of nonlinear covariates
+
+    for i in range(start, end):
+        print(i, "th simulation done")
+        np.random.seed(i + 10000)
+        # for rho in [0.25, 0.5, 0.75]:
+        # for sig in [0.1, 0.25, 0.5, 1]:
+        # for SNR in [0.1, 0.25, 0.5, 1]:
+        for main_sig in parameter_list:
+            while True:
+                # Generating a (X, Y) pair, and corresponding basis expansion
+                # The 'weakhierarchy' argument is overridden by setting
+                # `active_inter_list`.
+                (design, data_interaction, Y, Y_mean, data_combined,
+                 groups, active, active_inter_adj, active_inter_list, gamma) \
+                    = (generate_gaussian_instance_nonlinear_interaction_simple
+                       (n=500, p_nl=p_nl, rho=rho, full_corr=False, rho_noise=rho,
+                        SNR=None, main_signal=main_sig, noise_sd=0.25,
+                        nknots=6, degree=2, interaction_signal=sig,
+                        random_signs=False, scale=True, center=False,
+                        structure='weakhierarchy', s_interaction=s_inter,
+                        intercept=True, active_inter_list=active_inter_list_true,
+                        return_gamma=True))
+
+                # Performing Naive inference using 'all pairs'
+                coverages, lengths, selected_inter, p_values, targets, idx \
+                    = naive_inference_inter(X=design, Y=Y, groups=groups,
+                                            Y_mean=Y_mean, const=const,
+                                            n_features=20, interactions=data_interaction,
+                                            weight_frac=weights, level=0.9, mode='weakhierarchy',
+                                            solve_only=False, continued=False,
+                                            parallel=False, p_val=True,
+                                            return_pivot=True, intercept=True,
+                                            target_ids=None)
+
+                noselection = coverages is None
+
+                # Continue if Naive yields a nonempty group lasso selection
+                # (this is almost always the case)
+                if not noselection:
+                    # Performing data splitting using 'all pairs'
+                    (coverages_ds, lengths_ds, selected_inter_ds,
+                     p_values_ds, targets_ds, idx_ds) \
+                        = data_splitting_inter(X=design, Y=Y, groups=groups,
+                                               Y_mean=Y_mean, const=const,
+                                               n_features=20, interactions=data_interaction,
+                                               proportion=0.5,
+                                               weight_frac=weights, level=0.9, mode='weakhierarchy',
+                                               solve_only=False, continued=False, parallel=False,
+                                               p_val=True, target_ids=None)
+                    noselection = coverages_ds is None
+
+                # Continue if data splitting yields a nonempty group lasso selection
+                # (this is almost always the case)
+                if not noselection:
+                    # Performing MLE using 'all pairs'
+                    coverages_MLE, lengths_MLE, selected_inter_MLE, p_values_MLE, targets_MLE, idx_MLE \
+                        = (MLE_inference_inter
+                           (X=design, Y=Y, Y_mean=Y_mean, groups=groups,
+                            n_features=p_nl, interactions=data_interaction,
+                            intercept=True, proportion=0.5, weight_frac=weights,
+                            level=0.9, mode='weakhierarchy', solve_only=False,
+                            continued=False, parallel=False, p_val=True,
+                            target_ids=None))
+                    noselection = coverages_MLE is None
+
+                # Collect results if all three methods yields
+                # nonempty first-stage selection
+                if not noselection:
+                    # Naive
+                    oper_char["coverage rate"].append(np.mean(coverages))
+                    oper_char["avg length"].append(np.mean(lengths))
+                    oper_char["method"].append('Naive')
+                    oper_char["signal"].append(sig)
+                    oper_char["main signal"].append(main_sig)
+                    oper_char["rho"].append(rho)
+                    pval_dict[main_sig]['Naive'] += (p_values)
+                    oper_char["power"].append(calculate_power(p_values, targets, 0.1))
+                    update_targets(dict=target_dict,
+                                   true_inter_list=None,
+                                   targets=targets, parameter=main_sig,
+                                   method="Naive", idx=idx)
+
+                    # Data splitting
+                    oper_char["coverage rate"].append(np.mean(coverages_ds))
+                    oper_char["avg length"].append(np.mean(lengths_ds))
+                    oper_char["method"].append('Data Splitting')
+                    oper_char["signal"].append(sig)
+                    oper_char["main signal"].append(main_sig)
+                    oper_char["rho"].append(rho)
+                    pval_dict[main_sig]['Data Splitting'] += (p_values_ds)
+                    oper_char["power"].append(calculate_power(p_values_ds, targets_ds, 0.1))
+                    update_targets(dict=target_dict,
+                                   true_inter_list=None,
+                                   targets=targets_ds, parameter=main_sig,
+                                   method="Data Splitting", idx=idx_ds)
+
+                    # MLE
+                    oper_char["coverage rate"].append(np.mean(coverages_MLE))
+                    oper_char["avg length"].append(np.mean(lengths_MLE))
+                    oper_char["method"].append('MLE')
+                    oper_char["signal"].append(sig)
+                    oper_char["main signal"].append(main_sig)
+                    oper_char["rho"].append(rho)
+                    pval_dict[main_sig]['MLE'] += (p_values_MLE)
+                    oper_char["power"].append(calculate_power(p_values_MLE,
+                                                              targets_MLE,
+                                                              0.1))
+                    update_targets(dict=target_dict,
+                                   true_inter_list=None,
+                                   targets=targets_MLE, parameter=main_sig,
+                                   method="MLE", idx=idx_MLE)
+
+                    break
+
+    return oper_char, pval_dict, target_dict
+
+def vary_corr(start=0, end=100):
+    # A dictionary recording simulation results and metrics
+    oper_char = {}
+    oper_char["coverage rate"] = []
+    oper_char["avg length"] = []
+    oper_char["method"] = []
+    oper_char["rho cross"] = []
+    oper_char["signal"] = []
+    oper_char["power"] = []
+
+    # A dictionary recording p-values for each true interaction
+    # over all simulation results.
+    # Each simulation parameter (here parameter_list contain a list of correlations
+    # to be considered) has a corresponding dictionary of results
+    parameter_list = [0, 0.15, 0.3, 0.45]
+    pval_dict = {}
+    for x in parameter_list:
+        pval_dict[x] = {}
+        for m in ['Naive', 'Data Splitting', 'MLE']:
+            pval_dict[x][m] = []
+
+    # Dictionary of projected targets, over all simulation parameters
+    target_dict = {}
+    target_dict["parameter"] = []
+    target_dict["target"] = []
+    target_dict["target id"] = []
+    target_dict["method"] = []
+
+    # Group lasso solver constructor
+    const = group_lasso.gaussian
+
+    # List and array representations of true interaction indices
+    active_inter_list_true = np.array([[0, 1], [1, 2], [2, 4], [1, 5], [2, 6]])
+    active_inter_list_true_list = [(x[0], x[1]) for x in active_inter_list_true]
+
+    # p = 50
+    rho = 0.5  # Correlation of signal covariates (amongst themselves), and noise.
+    sig = 0.01  # Controlling interaction vs main signals.
+    # Setting it this way generates comparable main
+    # and interaction signals
+    weights = 2  # Group Lasso weights
+    s_inter = 5  # Number of true interactions
+    p_nl = 20  # Number of nonlinear covariates
+
+    for i in range(start, end):
+        print(i, "th simulation done")
+        # for rho in [0.25, 0.5, 0.75]:
+        # for sig in [0.1, 0.25, 0.5, 1]:
+        # for SNR in [0.1, 0.25, 0.5, 1]:
+        for rho_cross in parameter_list:
+            while True:
+                # Generating a (X, Y) pair, and corresponding basis expansion
+                # The 'weakhierarchy' argument is overridden by setting
+                # `active_inter_list`.
+                (design, data_interaction, Y, Y_mean, data_combined,
+                 groups, active, active_inter_adj, active_inter_list, gamma) \
+                    = (generate_gaussian_instance_nonlinear_interaction_simple
+                       (n=500, p_nl=p_nl, rho=rho, full_corr=False,
+                        rho_noise=rho, block_corr=True, rho_cross=rho_cross,
+                        SNR=2, nknots=6, degree=2, interaction_signal=sig,
+                        random_signs=False, scale=True, center=False,
+                        structure='weakhierarchy', s_interaction=s_inter,
+                        intercept=True, active_inter_list=active_inter_list_true,
+                        return_gamma=True))
+
+                # Performing Naive inference using 'all pairs'
+                coverages, lengths, selected_inter, p_values, targets, idx \
+                    = naive_inference_inter(X=design, Y=Y, groups=groups,
+                                            Y_mean=Y_mean, const=const,
+                                            n_features=20, interactions=data_interaction,
+                                            weight_frac=weights, level=0.9, mode='weakhierarchy',
+                                            solve_only=False, continued=False,
+                                            parallel=False, p_val=True,
+                                            return_pivot=True, intercept=True,
+                                            target_ids=None)
+
+                noselection = coverages is None
+
+                # Continue if Naive yields a nonempty group lasso selection
+                # (this is almost always the case)
+                if not noselection:
+                    # Performing data splitting using 'all pairs'
+                    (coverages_ds, lengths_ds, selected_inter_ds,
+                     p_values_ds, targets_ds, idx_ds) \
+                        = data_splitting_inter(X=design, Y=Y, groups=groups,
+                                               Y_mean=Y_mean, const=const,
+                                               n_features=20, interactions=data_interaction,
+                                               proportion=0.5,
+                                               weight_frac=weights, level=0.9, mode='weakhierarchy',
+                                               solve_only=False, continued=False, parallel=False,
+                                               p_val=True, target_ids=None)
+                    noselection = coverages_ds is None
+
+                # Continue if data splitting yields a nonempty group lasso selection
+                # (this is almost always the case)
+                if not noselection:
+                    # Performing MLE using 'all pairs'
+                    coverages_MLE, lengths_MLE, selected_inter_MLE, p_values_MLE, targets_MLE, idx_MLE \
+                        = (MLE_inference_inter
+                           (X=design, Y=Y, Y_mean=Y_mean, groups=groups,
+                            n_features=p_nl, interactions=data_interaction,
+                            intercept=True, proportion=0.5, weight_frac=weights,
+                            level=0.9, mode='weakhierarchy', solve_only=False,
+                            continued=False, parallel=False, p_val=True,
+                            target_ids=None))
+                    noselection = coverages_MLE is None
+
+                # Collect results if all three methods yields
+                # nonempty first-stage selection
+                if not noselection:
+                    # Naive
+                    oper_char["coverage rate"].append(np.mean(coverages))
+                    oper_char["avg length"].append(np.mean(lengths))
+                    oper_char["method"].append('Naive')
+                    oper_char["signal"].append(sig)
+                    oper_char["rho cross"].append(rho_cross)
+                    pval_dict[rho_cross]['Naive'] += (p_values)
+                    oper_char["power"].append(calculate_power(p_values, targets, 0.1))
+                    update_targets(dict=target_dict,
+                                   true_inter_list=None,
+                                   targets=targets, parameter=rho_cross,
+                                   method="Naive", idx=idx)
+
+                    # Data splitting
+                    oper_char["coverage rate"].append(np.mean(coverages_ds))
+                    oper_char["avg length"].append(np.mean(lengths_ds))
+                    oper_char["method"].append('Data Splitting')
+                    oper_char["signal"].append(sig)
+                    oper_char["rho cross"].append(rho_cross)
+                    pval_dict[rho_cross]['Data Splitting'] += (p_values_ds)
+                    oper_char["power"].append(calculate_power(p_values_ds, targets_ds, 0.1))
+                    update_targets(dict=target_dict,
+                                   true_inter_list=None,
+                                   targets=targets_ds, parameter=rho_cross,
+                                   method="Data Splitting", idx=idx_ds)
+
+                    # MLE
+                    oper_char["coverage rate"].append(np.mean(coverages_MLE))
+                    oper_char["avg length"].append(np.mean(lengths_MLE))
+                    oper_char["method"].append('MLE')
+                    oper_char["signal"].append(sig)
+                    oper_char["rho cross"].append(rho_cross)
+                    pval_dict[rho_cross]['MLE'] += (p_values_MLE)
+                    oper_char["power"].append(calculate_power(p_values_MLE,
+                                                              targets_MLE,
+                                                              0.1))
+                    update_targets(dict=target_dict,
+                                   true_inter_list=None,
+                                   targets=targets_MLE, parameter=rho_cross,
+                                   method="MLE", idx=idx_MLE)
+
+                    break
+
+def vary_main_fix_total(start=0, end=100):
+    # A dictionary recording simulation results and metrics
+    oper_char = {}
+    oper_char["coverage rate"] = []
+    oper_char["avg length"] = []
+    oper_char["method"] = []
+    oper_char["rho"] = []
+    oper_char["signal"] = []
+    oper_char["SNR"] = []
+    oper_char["power"] = []
+
+    # A dictionary recording p-values for each true interaction
+    # over all simulation results.
+    # Each simulation parameter (here parameter_list contain a list of SNRs
+    # to be considered) has a corresponding dictionary of results
+    pval_dict = {}
+    parameter_list = [0.0001, 0.0005, 0.001, 0.005]
+    for sig in parameter_list:
+        pval_dict[sig] = {}
+        for m in ['Naive', 'Data Splitting', 'MLE']:
+            pval_dict[sig][m] = []
+
+    # Group lasso solver constructor
+    const = group_lasso.gaussian
+
+    # List and array representations of true interaction indices
+    active_inter_list_true = np.array([[0, 1], [1, 2], [2, 4], [1, 5], [2, 6]])
+    active_inter_list_true_list = [(x[0], x[1]) for x in active_inter_list_true]
+
+    # Dictionary of projected targets, over all simulation parameters
+    target_dict = {}
+    target_dict["parameter"] = []
+    target_dict["target"] = []
+    target_dict["target id"] = []
+    target_dict["method"] = []
+
+    # p = 50
+    rho = 0.5  # Correlation of signal covariates (amongst themselves), and noise.
+    # sig = 0.01  # Controlling interaction vs main signals.
+    # Setting it this way generates comparable main
+    # and interaction signals
+    weights = 2  # Group Lasso weights
+    s_inter = 5  # Number of true interactions
+    p_nl = 20  # Number of nonlinear covariates
+    SNR = 1
+
+    for i in range(start, end):
+        print(i, "th simulation done")
+        for sig in parameter_list:
+            while True:
+                # Generating a (X, Y) pair, and corresponding basis expansion
+                # The 'weakhierarchy' argument is overridden by setting
+                # `active_inter_list`.
+                (design, data_interaction, Y, Y_mean, data_combined,
+                 groups, active, active_inter_adj, active_inter_list, gamma) \
+                    = (generate_gaussian_instance_nonlinear_interaction_simple
+                       (n=500, p_nl=p_nl, rho=rho, full_corr=False, rho_noise=rho,
+                        SNR=SNR, nknots=6, degree=2, interaction_signal=sig,
+                        random_signs=False, scale=True, center=False,
+                        structure='weakhierarchy', s_interaction=s_inter, intercept=True,
+                        active_inter_list=active_inter_list_true, return_gamma=True))
+
+                # Performing Naive inference using 'all pairs'
+                coverages, lengths, selected_inter, p_values, targets, idx \
+                    = naive_inference_inter(X=design, Y=Y, groups=groups,
+                                            Y_mean=Y_mean, const=const,
+                                            n_features=20, interactions=data_interaction,
+                                            weight_frac=weights, level=0.9,
+                                            mode='allpairs',
+                                            solve_only=False, continued=False,
+                                            parallel=False, p_val=True,
+                                            return_pivot=True, intercept=True,
+                                            target_ids=None)
+
+                noselection = coverages is None
+
+                # Continue if Naive yields a nonempty group lasso selection
+                # (this is almost always the case)
+                if not noselection:
+                    # Performing data splitting using 'all pairs'
+                    (coverages_ds, lengths_ds, selected_inter_ds,
+                     p_values_ds, targets_ds, idx_ds) \
+                        = data_splitting_inter(X=design, Y=Y, groups=groups,
+                                               Y_mean=Y_mean, const=const,
+                                               n_features=20,
+                                               interactions=data_interaction,
+                                               proportion=0.5,
+                                               weight_frac=weights, level=0.9,
+                                               mode='allpairs',
+                                               solve_only=False, continued=False,
+                                               parallel=False,
+                                               p_val=True,
+                                               target_ids=None)
+                    noselection = coverages_ds is None
+
+                # Continue if data splitting yields a nonempty group lasso selection
+                # (this is almost always the case)
+                if not noselection:
+                    # Performing MLE using 'all pairs'
+                    coverages_MLE, lengths_MLE, selected_inter_MLE, p_values_MLE, targets_MLE, idx_MLE \
+                        = (MLE_inference_inter
+                           (X=design, Y=Y, Y_mean=Y_mean, groups=groups,
+                            n_features=p_nl, interactions=data_interaction,
+                            intercept=True, proportion=0.5, weight_frac=weights,
+                            level=0.9, mode='allpairs', solve_only=False,
+                            continued=False, parallel=False, p_val=True,
+                            target_ids=None))
+                    noselection = coverages_MLE is None
+
+                # Collect results if all three methods yields
+                # nonempty first-stage selection
+                if not noselection:
+                    # Naive
+                    oper_char["coverage rate"].append(np.mean(coverages))
+                    oper_char["avg length"].append(np.mean(lengths))
+                    oper_char["method"].append('Naive')
+                    oper_char["signal"].append(sig)
+                    oper_char["rho"].append(rho)
+                    oper_char["SNR"].append(SNR)
+                    oper_char["target"].append(targets[0])
+                    pval_dict[sig]['Naive'] += (p_values)
+                    update_targets(dict=target_dict,
+                                   true_inter_list=None,
+                                   targets=targets, parameter=sig,
+                                   method="Naive", idx=idx)
+
+                    # Data splitting
+                    oper_char["coverage rate"].append(np.mean(coverages_ds))
+                    oper_char["avg length"].append(np.mean(lengths_ds))
+                    oper_char["method"].append('Data Splitting')
+                    oper_char["signal"].append(sig)
+                    oper_char["rho"].append(rho)
+                    oper_char["SNR"].append(SNR)
+                    pval_dict[sig]['Data Splitting'] += (p_values_ds)
+                    oper_char["power"].append(calculate_power(p_values_ds, targets_ds, 0.1))
+                    update_targets(dict=target_dict,
+                                   true_inter_list=None,
+                                   targets=targets_ds, parameter=sig,
+                                   method="Data Splitting", idx=idx_ds)
+
+                    # MLE
+                    oper_char["coverage rate"].append(np.mean(coverages_MLE))
+                    oper_char["avg length"].append(np.mean(lengths_MLE))
+                    oper_char["method"].append('MLE')
+                    oper_char["signal"].append(sig)
+                    oper_char["rho"].append(rho)
+                    oper_char["SNR"].append(SNR)
+                    pval_dict[sig]['MLE'] += (p_values_MLE)
+                    oper_char["power"].append(calculate_power(p_values_MLE,
+                                                              targets_MLE,
+                                                              0.1))
+                    update_targets(dict=target_dict,
+                                   true_inter_list=None,
+                                   targets=targets_MLE, parameter=sig,
+                                   method="MLE", idx=idx_MLE)
+
+                    break
 
 def combine_lists(L1):
     combined_dict = {}
