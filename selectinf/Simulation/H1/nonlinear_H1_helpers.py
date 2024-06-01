@@ -238,7 +238,7 @@ def vary_main(start=0, end=100):
     sig = 0.05  # Controlling interaction vs main signals.
     # Setting it this way generates comparable main
     # and interaction signals
-    weights = 2  # Group Lasso weights
+    weights = 2.5  # Group Lasso weights
     s_inter = 5  # Number of true interactions
     p_nl = 20  # Number of nonlinear covariates
 
@@ -397,7 +397,7 @@ def vary_corr(start=0, end=100):
     sig = 0.01  # Controlling interaction vs main signals.
     # Setting it this way generates comparable main
     # and interaction signals
-    weights = 2  # Group Lasso weights
+    weights = 2.5  # Group Lasso weights
     s_inter = 5  # Number of true interactions
     p_nl = 20  # Number of nonlinear covariates
 
@@ -551,7 +551,7 @@ def vary_main_fix_total(start=0, end=100):
     # sig = 0.01  # Controlling interaction vs main signals.
     # Setting it this way generates comparable main
     # and interaction signals
-    weights = 2  # Group Lasso weights
+    weights = 2.5  # Group Lasso weights
     s_inter = 5  # Number of true interactions
     p_nl = 20  # Number of nonlinear covariates
     SNR = 1
