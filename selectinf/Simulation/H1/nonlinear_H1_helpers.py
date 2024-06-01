@@ -578,7 +578,7 @@ def vary_main_fix_total(start=0, end=100):
                                             Y_mean=Y_mean, const=const,
                                             n_features=20, interactions=data_interaction,
                                             weight_frac=weights, level=0.9,
-                                            mode='allpairs',
+                                            mode='weakhierarchy',
                                             solve_only=False, continued=False,
                                             parallel=False, p_val=True,
                                             return_pivot=True, intercept=True,
@@ -598,7 +598,7 @@ def vary_main_fix_total(start=0, end=100):
                                                interactions=data_interaction,
                                                proportion=0.5,
                                                weight_frac=weights, level=0.9,
-                                               mode='allpairs',
+                                               mode='weakhierarchy',
                                                solve_only=False, continued=False,
                                                parallel=False,
                                                p_val=True,
@@ -614,7 +614,7 @@ def vary_main_fix_total(start=0, end=100):
                            (X=design, Y=Y, Y_mean=Y_mean, groups=groups,
                             n_features=p_nl, interactions=data_interaction,
                             intercept=True, proportion=0.5, weight_frac=weights,
-                            level=0.9, mode='allpairs', solve_only=False,
+                            level=0.9, mode='weakhierarchy', solve_only=False,
                             continued=False, parallel=False, p_val=True,
                             target_ids=None))
                     noselection = coverages_MLE is None
