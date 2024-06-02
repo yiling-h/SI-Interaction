@@ -509,6 +509,8 @@ def vary_corr(start=0, end=100):
                                    method="MLE", idx=idx_MLE)
 
                     break
+                    
+    return oper_char, pval_dict, target_dict
 
 def vary_main_fix_total(start=0, end=100):
     # A dictionary recording simulation results and metrics
@@ -666,6 +668,8 @@ def vary_main_fix_total(start=0, end=100):
                                    method="MLE", idx=idx_MLE)
 
                     break
+                    
+    return oper_char, pval_dict, target_dict
 
 def combine_lists(L1):
     combined_dict = {}
