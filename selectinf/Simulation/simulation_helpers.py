@@ -727,7 +727,7 @@ def MLE_inference_inter(X, Y, Y_mean, groups,
                         parallel=False, continued=True, solve_only=False,
                         conv_cont=None, nonzero_cont=None, ncores=8,
                         p_val=False, return_pivot=True,
-                        target_ids=None
+                        target_ids=None, randomizer_sd_const=2.
                         ):
     """
     Naive inference post-selection for interaction filtering
@@ -765,7 +765,8 @@ def MLE_inference_inter(X, Y, Y_mean, groups,
         prop_scalar = (1 - proportion) / proportion
 
         mean_diag = np.mean((X ** 2).sum(0))
-        randomizer_scale = np.sqrt(mean_diag) * np.std(Y) * 2.
+        # randomizer_sd_const default to 2.
+        randomizer_scale = np.sqrt(mean_diag) * np.std(Y) * randomizer_sd_const
 
         conv = const(X=X,
                      Y=Y,

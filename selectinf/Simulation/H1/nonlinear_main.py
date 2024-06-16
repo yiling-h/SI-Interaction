@@ -14,18 +14,20 @@ if __name__ == '__main__':
 
     argv = sys.argv
     ## sys.argv: [something, start, end, ncores]
-    start, end = int(argv[1]), int(argv[2])
-    ncores = int(argv[3])
-    #start, end, ncores = 0, 8, 4
+    #start, end, randomizer_scale = int(argv[1]), int(argv[2]), float(argv[3])
+    #ncores = int(argv[4])
+    start, end, randomizer_scale, ncores = 0, 8, 1.5, 4
     sim_per_process = int((end - start + 1) / ncores)
     print("start:", start, ", end:", end)
     print('nsim per process:', sim_per_process)
 
     # 2 sim per process, 4 processes in total
-    args = [(start + i * sim_per_process,
-             start + (i + 1) * sim_per_process) for i in range(ncores)]
+    args = [[start + i * sim_per_process,
+             start + (i + 1) * sim_per_process,
+             randomizer_scale] for i in range(ncores)]
     with mp.Pool(processes=ncores) as pool:
         results = pool.starmap(vary_main, args)
 
-    dir = 'Results/main/results' + str(start) + '_' + str(end) + '_wh.pkl'
+    dir = ('Results/main/results' + str(start) + '_' + str(end) + '_wh'
+           + str(randomizer_scale) + '.pkl')
     joblib.dump(results, dir)

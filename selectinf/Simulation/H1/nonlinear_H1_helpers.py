@@ -22,7 +22,8 @@ def calculate_power(pivot, targets, level):
     return true_rej
 # %%
 def update_targets(dict, true_inter_list,
-                   targets, parameter, method, idx):
+                   targets, parameter, method, idx,
+                   pivots, sim_idx):
     i = 0
     for id in idx:
         if true_inter_list is not None:
@@ -31,12 +32,16 @@ def update_targets(dict, true_inter_list,
                 dict["target"].append(targets[i])
                 dict["target id"].append(str(id))
                 dict["method"].append(method)
+                dict["pivot"].append(pivots[i])
+                dict["index"].append(sim_idx)
                 i += 1
         else:
             dict["parameter"].append(parameter)
             dict["target"].append(targets[i])
             dict["target id"].append(str(id))
             dict["method"].append(method)
+            dict["pivot"].append(pivots[i])
+            dict["index"].append(sim_idx)
             i += 1
 
 def vary_SNR(start=0, end=100):
@@ -199,7 +204,8 @@ def vary_SNR(start=0, end=100):
                     break
     return oper_char, pval_dict, target_dict
 
-def vary_main(start=0, end=100):
+def vary_main(start=0, end=100, randomization_scale=1.):
+    #print("randomization scale:", randomization_scale)
     # A dictionary recording simulation results and metrics
     oper_char = {}
     oper_char["coverage rate"] = []
@@ -216,12 +222,16 @@ def vary_main(start=0, end=100):
     target_dict["target"] = []
     target_dict["target id"] = []
     target_dict["method"] = []
+    target_dict["index"] = []
+    target_dict["pivot"] = []
 
     # A dictionary recording p-values for each true interaction
     # over all simulation results.
     # Each simulation parameter (here parameter_list contain a list of main signal strengths
     # to be considered) has a corresponding dictionary of results
-    parameter_list = [10, 5, 2, 1]
+    # Muted for a small scale case-study
+    # parameter_list = [10, 5, 2, 1]
+    parameter_list = [2, 1]
     pval_dict = {}
     for x in parameter_list:
         pval_dict[x] = {}
@@ -303,7 +313,7 @@ def vary_main(start=0, end=100):
                             intercept=True, proportion=0.5, weight_frac=weights,
                             level=0.9, mode='weakhierarchy', solve_only=False,
                             continued=False, parallel=False, p_val=True,
-                            target_ids=None))
+                            target_ids=None, randomizer_sd_const=randomization_scale))
                     noselection = coverages_MLE is None
 
                 # Collect results if all three methods yields
@@ -321,7 +331,8 @@ def vary_main(start=0, end=100):
                     update_targets(dict=target_dict,
                                    true_inter_list=None,
                                    targets=targets, parameter=main_sig,
-                                   method="Naive", idx=idx)
+                                   method="Naive", idx=idx,
+                                   pivots=p_values, sim_idx=i)
 
                     # Data splitting
                     oper_char["coverage rate"].append(np.mean(coverages_ds))
@@ -335,7 +346,8 @@ def vary_main(start=0, end=100):
                     update_targets(dict=target_dict,
                                    true_inter_list=None,
                                    targets=targets_ds, parameter=main_sig,
-                                   method="Data Splitting", idx=idx_ds)
+                                   method="Data Splitting", idx=idx_ds,
+                                   pivots=p_values_ds, sim_idx=i)
 
                     # MLE
                     oper_char["coverage rate"].append(np.mean(coverages_MLE))
@@ -351,7 +363,8 @@ def vary_main(start=0, end=100):
                     update_targets(dict=target_dict,
                                    true_inter_list=None,
                                    targets=targets_MLE, parameter=main_sig,
-                                   method="MLE", idx=idx_MLE)
+                                   method="MLE", idx=idx_MLE,
+                                   pivots=p_values_MLE, sim_idx=i)
 
                     break
 
