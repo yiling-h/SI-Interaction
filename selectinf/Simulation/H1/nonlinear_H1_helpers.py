@@ -632,6 +632,7 @@ def vary_main_fix_total(start=0, end=100):
                     oper_char["rho"].append(rho)
                     oper_char["SNR"].append(SNR)
                     pval_dict[sig]['Naive'] += (p_values)
+                    oper_char["power"].append(calculate_power(p_values, targets, 0.1))
                     update_targets(dict=target_dict,
                                    true_inter_list=None,
                                    targets=targets, parameter=sig,
