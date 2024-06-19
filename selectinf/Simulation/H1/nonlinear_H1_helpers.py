@@ -205,6 +205,8 @@ def vary_SNR(start=0, end=100):
     return oper_char, pval_dict, target_dict
 
 def vary_main(start=0, end=100, randomization_scale=1.):
+    if randomization_scale == 0:
+        randomization_scale = None
     #print("randomization scale:", randomization_scale)
     # A dictionary recording simulation results and metrics
     oper_char = {}
@@ -299,7 +301,7 @@ def vary_main(start=0, end=100, randomization_scale=1.):
                                                proportion=0.5,
                                                weight_frac=weights, level=0.9, mode='weakhierarchy',
                                                solve_only=False, continued=False, parallel=False,
-                                               p_val=True, target_ids=None)
+                                               p_val=True, return_pivot=True, target_ids=None)
                     noselection = coverages_ds is None
 
                 # Continue if data splitting yields a nonempty group lasso selection
@@ -312,7 +314,7 @@ def vary_main(start=0, end=100, randomization_scale=1.):
                             n_features=p_nl, interactions=data_interaction,
                             intercept=True, proportion=0.5, weight_frac=weights,
                             level=0.9, mode='weakhierarchy', solve_only=False,
-                            continued=False, parallel=False, p_val=True,
+                            continued=False, parallel=False, p_val=True, return_pivot=True,
                             target_ids=None, randomizer_sd_const=randomization_scale))
                     noselection = coverages_MLE is None
 

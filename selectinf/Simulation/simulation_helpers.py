@@ -768,14 +768,23 @@ def MLE_inference_inter(X, Y, Y_mean, groups,
         # randomizer_sd_const default to 2.
         randomizer_scale = np.sqrt(mean_diag) * np.std(Y) * randomizer_sd_const
 
-        conv = const(X=X,
-                     Y=Y,
-                     groups=groups,
-                     weights=weights,
-                     useJacobian=True,
-                     ridge_term=0.,
-                     randomizer_scale=randomizer_scale)
-        # cov_rand=X.T @ X * prop_scalar)
+        if randomizer_sd_const == None:
+            conv = const(X=X,
+                         Y=Y,
+                         groups=groups,
+                         weights=weights,
+                         useJacobian=True,
+                         ridge_term=0.,
+                         cov_rand=X.T @ X * prop_scalar)
+        else:
+            print("Data Carving Randomization Used")
+            conv = const(X=X,
+                         Y=Y,
+                         groups=groups,
+                         weights=weights,
+                         useJacobian=True,
+                         ridge_term=0.,
+                         randomizer_scale=randomizer_scale)
 
         signs, _ = conv.fit()
         nonzero = signs != 0

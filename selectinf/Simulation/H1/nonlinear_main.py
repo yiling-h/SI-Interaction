@@ -13,7 +13,7 @@ if __name__ == '__main__':
     print("Current Working Directory:", current_directory)
 
     argv = sys.argv
-    ## sys.argv: [something, start, end, ncores]
+    ## sys.argv: [something, start, end, randomizer_scale, ncores]
     start, end, randomizer_scale = int(argv[1]), int(argv[2]), float(argv[3])
     ncores = int(argv[4])
     #start, end, randomizer_scale, ncores = 0, 8, 1.5, 4

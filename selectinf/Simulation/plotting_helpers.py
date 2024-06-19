@@ -26,7 +26,7 @@ def plot_ecdf(data):
 
 
 # %%
-def plot_ecdfs(data_dict, xaxis=None):
+def plot_ecdfs(data_dict, xaxis=None, title=None):
     """
     Plot an ECDF for each rho value with different methods overlayed.
 
@@ -77,6 +77,8 @@ def plot_ecdfs(data_dict, xaxis=None):
         # Add legend
         ax.legend()
 
+    if title is not None:
+        plt.suptitle(title)
     # Adjust layout to prevent overlap
     plt.tight_layout()
     # Show plot
@@ -85,7 +87,7 @@ def plot_ecdfs(data_dict, xaxis=None):
 
 # %%
 def point_plot_multimetrics(oper_char_df, x_axis='p', hue='method', plot_size=False,
-                            metric_list=None):
+                            metric_list=None, ylim_low=None, ylim_high=None):
     oper_char_df = oper_char_df.copy()
     sns.set_style("white", {'axes.facecolor': 'white',
                             'axes.grid': True,
@@ -168,7 +170,7 @@ def plot_pvals_targets(gammas_list, targets_list, xaxis):
     plt.xticks(locs, formatted_labels)
     plt.title("Projected targets vs " + xaxis)
 
-def plot_multi_targets(target_dict, xaxis):
+def plot_multi_targets(target_dict, xaxis, ylim_low=None, ylim_high=None):
     parameters = target_dict['parameter']
     plt.figure(figsize=(2.5 * len(np.unique(parameters)), 6))
     sns.boxplot(y=target_dict['target'],
@@ -181,5 +183,7 @@ def plot_multi_targets(target_dict, xaxis):
     # Set the labels with 2 decimal places
     #formatted_labels = [f'{float(label.get_text()):.3f}' for label in labels]
     # plt.xticks(locs, formatted_labels)
+    if ylim_low is not None and ylim_high is not None:
+        plt.ylim(ylim_low, ylim_high)
     plt.legend(title=xaxis, loc='lower center', ncol=4)
     plt.title("Projected targets vs " + xaxis)
