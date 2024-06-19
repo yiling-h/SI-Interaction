@@ -764,11 +764,8 @@ def MLE_inference_inter(X, Y, Y_mean, groups,
 
         prop_scalar = (1 - proportion) / proportion
 
-        mean_diag = np.mean((X ** 2).sum(0))
-        # randomizer_sd_const default to 2.
-        randomizer_scale = np.sqrt(mean_diag) * np.std(Y) * randomizer_sd_const
-
         if randomizer_sd_const == None:
+            print("Data Carving Randomization Used")
             conv = const(X=X,
                          Y=Y,
                          groups=groups,
@@ -777,7 +774,9 @@ def MLE_inference_inter(X, Y, Y_mean, groups,
                          ridge_term=0.,
                          cov_rand=X.T @ X * prop_scalar)
         else:
-            print("Data Carving Randomization Used")
+            mean_diag = np.mean((X ** 2).sum(0))
+            # randomizer_sd_const default to 2.
+            randomizer_scale = np.sqrt(mean_diag) * np.std(Y) * randomizer_sd_const
             conv = const(X=X,
                          Y=Y,
                          groups=groups,
