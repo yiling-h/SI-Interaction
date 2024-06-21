@@ -23,7 +23,7 @@ def calculate_power(pivot, targets, level):
 # %%
 def update_targets(dict, true_inter_list,
                    targets, parameter, method, idx,
-                   pivots, sim_idx):
+                   pivots, pvals, sim_idx):
     i = 0
     for id in idx:
         if true_inter_list is not None:
@@ -34,6 +34,7 @@ def update_targets(dict, true_inter_list,
                 dict["method"].append(method)
                 dict["pivot"].append(pivots[i])
                 dict["index"].append(sim_idx)
+                dict["pval"].append(pvals[i])
                 i += 1
         else:
             dict["parameter"].append(parameter)
@@ -42,6 +43,7 @@ def update_targets(dict, true_inter_list,
             dict["method"].append(method)
             dict["pivot"].append(pivots[i])
             dict["index"].append(sim_idx)
+            dict["pval"].append(pvals[i])
             i += 1
 
 def vary_SNR(start=0, end=100):
@@ -226,6 +228,7 @@ def vary_main(start=0, end=100, randomization_scale=1.):
     target_dict["method"] = []
     target_dict["index"] = []
     target_dict["pivot"] = []
+    target_dict["pval"] = []
 
     # A dictionary recording p-values for each true interaction
     # over all simulation results.
@@ -277,7 +280,7 @@ def vary_main(start=0, end=100, randomization_scale=1.):
                         return_gamma=True))
 
                 # Performing Naive inference using 'all pairs'
-                coverages, lengths, selected_inter, p_values, targets, idx \
+                coverages, lengths, selected_inter, p_values, pivots, targets, idx \
                     = naive_inference_inter(X=design, Y=Y, groups=groups,
                                             Y_mean=Y_mean, const=const,
                                             n_features=20, interactions=data_interaction,
@@ -294,7 +297,7 @@ def vary_main(start=0, end=100, randomization_scale=1.):
                 if not noselection:
                     # Performing data splitting using 'all pairs'
                     (coverages_ds, lengths_ds, selected_inter_ds,
-                     p_values_ds, targets_ds, idx_ds) \
+                     p_values_ds, pivots_ds, targets_ds, idx_ds) \
                         = data_splitting_inter(X=design, Y=Y, groups=groups,
                                                Y_mean=Y_mean, const=const,
                                                n_features=20, interactions=data_interaction,
@@ -308,7 +311,8 @@ def vary_main(start=0, end=100, randomization_scale=1.):
                 # (this is almost always the case)
                 if not noselection:
                     # Performing MLE using 'all pairs'
-                    coverages_MLE, lengths_MLE, selected_inter_MLE, p_values_MLE, targets_MLE, idx_MLE \
+                    (coverages_MLE, lengths_MLE, selected_inter_MLE, p_values_MLE, pivots_MLE,
+                     targets_MLE, idx_MLE) \
                         = (MLE_inference_inter
                            (X=design, Y=Y, Y_mean=Y_mean, groups=groups,
                             n_features=p_nl, interactions=data_interaction,
@@ -334,7 +338,8 @@ def vary_main(start=0, end=100, randomization_scale=1.):
                                    true_inter_list=None,
                                    targets=targets, parameter=main_sig,
                                    method="Naive", idx=idx,
-                                   pivots=p_values, sim_idx=i)
+                                   pvals=p_values,
+                                   pivots=pivots, sim_idx=i)
 
                     # Data splitting
                     oper_char["coverage rate"].append(np.mean(coverages_ds))
@@ -349,7 +354,8 @@ def vary_main(start=0, end=100, randomization_scale=1.):
                                    true_inter_list=None,
                                    targets=targets_ds, parameter=main_sig,
                                    method="Data Splitting", idx=idx_ds,
-                                   pivots=p_values_ds, sim_idx=i)
+                                   pvals=p_values_ds,
+                                   pivots=pivots_ds, sim_idx=i)
 
                     # MLE
                     oper_char["coverage rate"].append(np.mean(coverages_MLE))
@@ -366,7 +372,8 @@ def vary_main(start=0, end=100, randomization_scale=1.):
                                    true_inter_list=None,
                                    targets=targets_MLE, parameter=main_sig,
                                    method="MLE", idx=idx_MLE,
-                                   pivots=p_values_MLE, sim_idx=i)
+                                   pvals=p_values_MLE,
+                                   pivots=pivots_MLE, sim_idx=i)
 
                     break
 

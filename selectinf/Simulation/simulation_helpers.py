@@ -60,14 +60,12 @@ def interaction_t_test_single(X_E, Y, Y_mean, interaction, level=0.9,
     coverage = (target > interval_low) * (target < interval_up)
 
     if p_val:
-        pivot = (beta_hat[p_prime - 1] / sd)
-        if not return_pivot:
-            p_inter = 2 * scipy.stats.norm.sf(np.abs(pivot))
-        else:
-            p_inter = ndist.cdf((beta_hat[p_prime - 1] - target) / sd)
+        piv = (beta_hat[p_prime - 1] / sd)
+        p_value = 2 * scipy.stats.norm.sf(np.abs(piv))
+        pivot = ndist.cdf((beta_hat[p_prime - 1] - target) / sd)
 
         return (coverage, interval_up - interval_low,
-                (interval_up * interval_low > 0), p_inter, target)
+                (interval_up * interval_low > 0), p_value, pivot, target)
 
     return (coverage, interval_up - interval_low,
             (interval_up * interval_low > 0), target)
@@ -83,6 +81,7 @@ def interaction_t_tests_all(X_E, Y, Y_mean, n_features, active_vars_flag,
     length_list = []
     selected_interactions = []
     p_value_list = []
+    pivots_list = []
     target_list = []
 
     if target_ids is None:
@@ -116,7 +115,7 @@ def interaction_t_tests_all(X_E, Y, Y_mean, n_features, active_vars_flag,
             length_list.append(length)
             target_list.append(target)
         else:
-            coverage, length, selected, p_inter, target \
+            coverage, length, selected, p_inter, pivot, target \
                 = interaction_t_test_single(X_E, Y, Y_mean,
                                             interaction_ij,
                                             level=level, p_val=p_val,
@@ -124,6 +123,7 @@ def interaction_t_tests_all(X_E, Y, Y_mean, n_features, active_vars_flag,
             coverage_list.append(coverage)
             length_list.append(length)
             p_value_list.append(p_inter)
+            pivots_list.append(pivot)
             target_list.append(target)
         if selected:
             selected_interactions.append((i, j))
@@ -133,7 +133,7 @@ def interaction_t_tests_all(X_E, Y, Y_mean, n_features, active_vars_flag,
                 selected_interactions, target_list)
     else:
         return (np.array(coverage_list), np.array(length_list),
-                selected_interactions, p_value_list, target_list)
+                selected_interactions, p_value_list, pivots_list, target_list)
 
 
 def interaction_t_test_single_parallel(ij_pair, X_E, Y, Y_mean,
@@ -186,6 +186,7 @@ def interaction_t_test_single_parallel(ij_pair, X_E, Y, Y_mean,
 
 
 # T-test for all interaction terms
+# TODO: ALL PARALLEL TEST (T and SELECTIVE) UNCHANGED FOR NEW RETURN STRUCTURE OF PIVOTS
 def interaction_t_tests_all_parallel(X_E, Y, Y_mean, n_features, active_vars_flag,
                                      interactions, selection_idx=None,
                                      level=0.9, mode="allpairs", ncores=8,
@@ -323,7 +324,7 @@ def naive_inference_inter(X, Y, groups, Y_mean, const,
             if not p_val:
                 return None, None, None, None, None
             else:
-                return None, None, None, None, None, None
+                return None, None, None, None, None, None, None
 
         if parallel:
             if not p_val:
@@ -333,7 +334,7 @@ def naive_inference_inter(X, Y, groups, Y_mean, const,
                                                        level=level, mode=mode, ncores=ncores,
                                                        p_val=False, target_ids=target_ids)
             else:
-                coverages, lengths, selected_interactions, p_values, targets \
+                coverages, lengths, selected_interactions, p_values, pivots, targets \
                     = interaction_t_tests_all_parallel(X_E, Y, Y_mean, n_features,
                                                        active_vars_flag, interactions,
                                                        level=level, mode=mode, ncores=ncores,
@@ -347,7 +348,7 @@ def naive_inference_inter(X, Y, groups, Y_mean, const,
                                               level=level, mode=mode, p_val=False,
                                               target_ids=target_ids)
             else:
-                coverages, lengths, selected_interactions, p_values, targets \
+                coverages, lengths, selected_interactions, p_values, pivots, targets \
                     = interaction_t_tests_all(X_E, Y, Y_mean, n_features,
                                               active_vars_flag, interactions,
                                               level=level, mode=mode, p_val=True,
@@ -357,11 +358,11 @@ def naive_inference_inter(X, Y, groups, Y_mean, const,
         if not p_val:
             return coverages, lengths, selected_interactions, targets, task_idx#target_ids
         else:
-            return coverages, lengths, selected_interactions, p_values, targets, task_idx#target_ids
+            return coverages, lengths, selected_interactions, p_values, pivots, targets, task_idx#target_ids
     if not p_val:
         return None, None, None, None, None
     else:
-        return None, None, None, None, None, None
+        return None, None, None, None, None, None, None
 
 
 def data_splitting_inter(X, Y, groups, Y_mean, const,
@@ -471,7 +472,7 @@ def data_splitting_inter(X, Y, groups, Y_mean, const,
             if not p_val:
                 return None, None, None, None, None
             else:
-                return None, None, None, None, None, None
+                return None, None, None, None, None, None, None
 
         if parallel:
             if not p_val:
@@ -485,7 +486,7 @@ def data_splitting_inter(X, Y, groups, Y_mean, const,
                                                        p_val=False,
                                                        target_ids=target_ids)
             else:
-                coverages, lengths, selected_interactions, p_values, targets \
+                coverages, lengths, selected_interactions, p_values, pivots, targets \
                     = interaction_t_tests_all_parallel(X_E, Y_notS,
                                                        Y_mean[~subset_select],
                                                        n_features,
@@ -505,7 +506,7 @@ def data_splitting_inter(X, Y, groups, Y_mean, const,
                                               level=level, mode=mode, p_val=False,
                                               target_ids=target_ids)
             else:
-                coverages, lengths, selected_interactions, p_values, targets \
+                coverages, lengths, selected_interactions, p_values, pivots, targets \
                     = interaction_t_tests_all(X_E, Y_notS, Y_mean[~subset_select],
                                               n_features,
                                               active_vars_flag, interactions,
@@ -518,12 +519,12 @@ def data_splitting_inter(X, Y, groups, Y_mean, const,
         if not p_val:
             return coverages, lengths, selected_interactions, targets, task_idx#target_ids
         else:
-            return coverages, lengths, selected_interactions, p_values, targets, task_idx#target_ids
+            return coverages, lengths, selected_interactions, p_values, pivots, targets, task_idx#target_ids
 
     if not p_val:
         return None, None, None, None, None
     else:
-        return None, None, None, None, None, None
+        return None, None, None, None, None, None, None
 
 
 def interaction_selective_single(conv, dispersion, X_E, Y_mean,
@@ -549,10 +550,9 @@ def interaction_selective_single(conv, dispersion, X_E, Y_mean,
                                method='selective_MLE',
                                level=level)
 
-    if not return_pivot:
+    if p_val:
         pval = result['pvalue'][p_prime - 1]
-    else:
-        pval = ndist.cdf((result['MLE'][p_prime - 1] - target) / result['SE'][p_prime - 1])
+        pivot = ndist.cdf((result['MLE'][p_prime - 1] - target) / result['SE'][p_prime - 1])
         #pval = result['pivot'][p_prime - 1]
     #print("Z-values:", result['Zvalue'][p_prime - 1])
 
@@ -564,7 +564,7 @@ def interaction_selective_single(conv, dispersion, X_E, Y_mean,
 
     if p_val:
         return (coverage, interval_up - interval_low,
-                (interval_up * interval_low > 0), pval, target)
+                    (interval_up * interval_low > 0), pval, pivot, target)
 
     return (coverage, interval_up - interval_low,
             (interval_up * interval_low > 0), target)
@@ -626,6 +626,7 @@ def interaction_selective_tests_all(conv, dispersion,
     length_list = []
     selected_interactions = []
     p_values_list = []
+    pivots_list = []
     target_list = []
 
     if target_ids is None:
@@ -654,11 +655,12 @@ def interaction_selective_tests_all(conv, dispersion,
                 = interaction_selective_single(conv, dispersion, X_E, Y_mean,
                                                interaction_ij, level=level, p_val=False)
         else:
-            coverage, length, selected, p_inter, target \
+            coverage, length, selected, p_inter, pivots, target \
                 = interaction_selective_single(conv, dispersion, X_E, Y_mean,
                                                interaction_ij, level=level, p_val=True,
                                                return_pivot=return_pivot)
             p_values_list.append(p_inter)
+            pivots_list.append(pivots)
         coverage_list.append(coverage)
         length_list.append(length)
         target_list.append(target)
@@ -670,7 +672,7 @@ def interaction_selective_tests_all(conv, dispersion,
                 selected_interactions, np.array(target_list))
     else:
         return (np.array(coverage_list), np.array(length_list),
-                selected_interactions, p_values_list, np.array(target_list))
+                selected_interactions, p_values_list, pivots_list, np.array(target_list))
 
 
 def interaction_selective_tests_all_parallel(conv, dispersion,
@@ -829,7 +831,7 @@ def MLE_inference_inter(X, Y, Y_mean, groups,
             if not p_val:
                 return None, None, None, None, None
             else:
-                return None, None, None, None, None, None
+                return None, None, None, None, None, None, None
 
         if parallel:
             if not p_val:
@@ -841,7 +843,7 @@ def MLE_inference_inter(X, Y, Y_mean, groups,
                                                                ncores=ncores, p_val=False,
                                                                target_ids=target_ids)
             else:
-                coverages, lengths, selected_interactions, p_values, targets \
+                coverages, lengths, selected_interactions, p_values, pivots, targets \
                     = interaction_selective_tests_all_parallel(conv, dispersion,
                                                                X_E, Y_mean, n_features, active_vars_flag,
                                                                interactions,
@@ -858,7 +860,7 @@ def MLE_inference_inter(X, Y, Y_mean, groups,
                                                       level=level, mode=mode, p_val=False,
                                                       target_ids=target_ids)
             else:
-                coverages, lengths, selected_interactions, p_values, targets \
+                coverages, lengths, selected_interactions, p_values, pivots, targets \
                     = interaction_selective_tests_all(conv, dispersion,
                                                       X_E, Y_mean, n_features, active_vars_flag,
                                                       interactions,
@@ -868,11 +870,11 @@ def MLE_inference_inter(X, Y, Y_mean, groups,
 
         if not p_val:
             return coverages, lengths, selected_interactions, targets, task_idx#target_ids
-        return coverages, lengths, selected_interactions, p_values, targets, task_idx#target_ids
+        return coverages, lengths, selected_interactions, p_values, pivots, targets, task_idx#target_ids
 
     if not p_val:
         return None, None, None, None, None
-    return None, None, None, None, None, None
+    return None, None, None, None, None, None, None
 
 
 def plotting(oper_char_df, x_axis='p', hue='method'):

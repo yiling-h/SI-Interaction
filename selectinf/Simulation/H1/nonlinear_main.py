@@ -16,7 +16,7 @@ if __name__ == '__main__':
     ## sys.argv: [something, start, end, randomizer_scale, ncores]
     start, end, randomizer_scale = int(argv[1]), int(argv[2]), float(argv[3])
     ncores = int(argv[4])
-    #start, end, randomizer_scale, ncores = 0, 8, 1.5, 4
+    #start, end, randomizer_scale, ncores = 0, 40, 1.5, 4
     sim_per_process = int((end - start + 1) / ncores)
     print("start:", start, ", end:", end)
     print('nsim per process:', sim_per_process)
