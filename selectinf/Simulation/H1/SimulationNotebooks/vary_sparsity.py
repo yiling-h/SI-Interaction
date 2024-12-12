@@ -80,6 +80,7 @@ def vary_sparsity(start, end, dir):
 
     # Group lasso solver constructor
     const = group_lasso.gaussian
+    active_inter_dict = generate_interactions()
 
     rho = 0.5  # Correlation of signal covariates (amongst themselves), and noise.
     sig = 2  # Controlling interaction vs main signals.
