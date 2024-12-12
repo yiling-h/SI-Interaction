@@ -71,7 +71,7 @@ def vary_sparsity(start, end, dir):
     # over all simulation results.
     # Each simulation parameter (here parameter_list contain a list of main signal strengths
     # to be considered) has a corresponding dictionary of results
-    parameter_list = np.array([0, 5, 10, 15])  # np.array(targeting_sizes)
+    parameter_list = np.array([0, 5, 10, 20])  # np.array(targeting_sizes)
     pval_dict = {}
     for x in parameter_list:
         pval_dict[x] = {}
@@ -86,7 +86,7 @@ def vary_sparsity(start, end, dir):
     sig = 2  # Controlling interaction vs main signals.
     # Setting it this way generates comparable main
     # and interaction signals (sig = 2 works )
-    weights = 0.1  # Group Lasso weights
+    weights = 0.05  # Group Lasso weights
     s_inter = 5  # Number of true interactions
     p_nl = 20  # Number of nonlinear covariates
     n = 200
