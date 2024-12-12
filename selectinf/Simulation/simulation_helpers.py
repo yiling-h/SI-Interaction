@@ -238,7 +238,7 @@ def naive_inference_inter(X, Y, groups, Y_mean, const,
                           solve_only=False, continued=False,
                           nonzero_cont=None, selected_groups_cont=None,
                           p_val=False, return_pivot=True,
-                          target_ids=None
+                          target_ids=None, root_n_scaled=True
                           ):
     """
     Naive inference post-selection for interaction filtering
@@ -264,8 +264,13 @@ def naive_inference_inter(X, Y, groups, Y_mean, const,
 
         sigma_ = np.sqrt(dispersion)
 
+        if not root_n_scaled:
+            weight_frac *= np.sqrt(n)
         ##solve group LASSO with group penalty weights = weights
         weights = dict([(i, weight_frac * sigma_ * np.sqrt(2 * np.log(p))) for i in np.unique(groups)])
+
+        #print("Naive weights:", weights)
+
         # Don't penalize intercept
         if intercept:
             weights[0] = 0
@@ -278,7 +283,7 @@ def naive_inference_inter(X, Y, groups, Y_mean, const,
                      perturb=np.zeros(p),
                      ridge_term=0.)
 
-        signs, _ = conv.fit()
+        signs, soln = conv.fit()
         nonzero = signs != 0
 
         selected_groups = conv.selection_variable['active_groups']
@@ -322,9 +327,9 @@ def naive_inference_inter(X, Y, groups, Y_mean, const,
             inference_flag = True
         if not inference_flag:
             if not p_val:
-                return None, None, None, None, None
+                return None, None, None, None, None, soln
             else:
-                return None, None, None, None, None, None, None
+                return None, None, None, None, None, None, None, soln
 
         if parallel:
             if not p_val:
@@ -356,13 +361,15 @@ def naive_inference_inter(X, Y, groups, Y_mean, const,
                                               target_ids=target_ids)
         #print("Naive Selection Size:", len(selected_interactions))
         if not p_val:
-            return coverages, lengths, selected_interactions, targets, task_idx#target_ids
+            return (coverages, lengths, selected_interactions,
+                    targets, task_idx, soln)#target_ids
         else:
-            return coverages, lengths, selected_interactions, p_values, pivots, targets, task_idx#target_ids
+            return (coverages, lengths, selected_interactions,
+                    p_values, pivots, targets, task_idx, soln)#target_ids
     if not p_val:
-        return None, None, None, None, None
+        return None, None, None, None, None, soln
     else:
-        return None, None, None, None, None, None, None
+        return None, None, None, None, None, None, None, soln
 
 
 def data_splitting_inter(X, Y, groups, Y_mean, const,
@@ -373,7 +380,8 @@ def data_splitting_inter(X, Y, groups, Y_mean, const,
                          solve_only=False, continued=False,
                          nonzero_cont=None, selected_groups_cont=None, subset_cont=None,
                          p_val=False, return_pivot=True,
-                         target_ids=None
+                         target_ids=None, root_n_scaled=True,
+                         soln_cont=None
                          ):
     """
     Naive inference post-selection for interaction filtering
@@ -410,10 +418,17 @@ def data_splitting_inter(X, Y, groups, Y_mean, const,
             dispersion = sigma_ ** 2
 
         sigma_ = np.sqrt(dispersion)
-        weight_frac *= n1 / n
+
+        if not root_n_scaled:
+            weight_frac *= np.sqrt(n1)
+        else:
+            weight_frac *= np.sqrt(proportion)
 
         ##solve group LASSO with group penalty weights = weights
         weights = dict([(i, weight_frac * sigma_ * np.sqrt(2 * np.log(p))) for i in np.unique(groups)])
+
+        #print("Data splitting weights:", weights)
+
         # Don't penalize intercept
         if intercept:
             weights[0] = 0
@@ -426,18 +441,19 @@ def data_splitting_inter(X, Y, groups, Y_mean, const,
                      perturb=np.zeros(p),
                      ridge_term=0.)
 
-        signs, _ = conv.fit()
+        signs, soln = conv.fit()
         nonzero = signs != 0
 
         selected_groups = conv.selection_variable['active_groups']
         G_E = len(selected_groups)
 
         if solve_only:
-            return nonzero, selected_groups, subset_select
+            return nonzero, selected_groups, subset_select, soln
     else:
         nonzero = nonzero_cont
         selected_groups = selected_groups_cont
         G_E = len(selected_groups)
+        soln = soln_cont
 
     if G_E > (1 + intercept):
         print("DS Selected Groups:", G_E)
@@ -468,11 +484,12 @@ def data_splitting_inter(X, Y, groups, Y_mean, const,
             target_ids = [p for p in target_ids if p in task_idx]
         else:
             inference_flag = True
+            target_ids = task_idx.copy()
         if not inference_flag:
             if not p_val:
-                return None, None, None, None, None
+                return None, None, None, None, None, soln
             else:
-                return None, None, None, None, None, None, None
+                return None, None, None, None, None, None, None, soln
 
         if parallel:
             if not p_val:
@@ -517,14 +534,16 @@ def data_splitting_inter(X, Y, groups, Y_mean, const,
 
         #print("DS Selection Size:", len(selected_interactions))
         if not p_val:
-            return coverages, lengths, selected_interactions, targets, task_idx#target_ids
+            return (coverages, lengths, selected_interactions,
+                    targets, task_idx, soln)#target_ids
         else:
-            return coverages, lengths, selected_interactions, p_values, pivots, targets, task_idx#target_ids
+            return (coverages, lengths, selected_interactions,
+                    p_values, pivots, targets, task_idx, soln)#target_ids
 
     if not p_val:
-        return None, None, None, None, None
+        return None, None, None, None, None, soln
     else:
-        return None, None, None, None, None, None, None
+        return None, None, None, None, None, None, None, soln
 
 
 def interaction_selective_single(conv, dispersion, X_E, Y_mean,
@@ -725,11 +744,11 @@ def interaction_selective_tests_all_parallel(conv, dispersion,
 def MLE_inference_inter(X, Y, Y_mean, groups,
                         n_features, interactions, intercept=False,
                         weight_frac=1.25, level=0.9,
-                        proportion=0.5, mode="allpairs",
+                        proportion=None, mode="allpairs",
                         parallel=False, continued=True, solve_only=False,
                         conv_cont=None, nonzero_cont=None, ncores=8,
                         p_val=False, return_pivot=True,
-                        target_ids=None, randomizer_sd_const=2.
+                        target_ids=None, randomizer_sd_const=None, root_n_scaled=True
                         ):
     """
     Naive inference post-selection for interaction filtering
@@ -747,9 +766,7 @@ def MLE_inference_inter(X, Y, Y_mean, groups,
     ##estimate noise level in data
     sigma_ = np.std(Y)
     if n > p:
-        dispersion \
-            = (np.linalg.norm(Y - X.dot(np.linalg.pinv(X).dot(Y))) ** 2
-               / (n - p))
+        dispersion = np.linalg.norm(Y - X.dot(np.linalg.pinv(X).dot(Y))) ** 2 / (n - p)
     else:
         dispersion = sigma_ ** 2
 
@@ -759,26 +776,40 @@ def MLE_inference_inter(X, Y, Y_mean, groups,
         const = SPAM.gaussian
 
         ##solve group LASSO with group penalty weights = weights
-        weights = dict([(i, weight_frac * sigma_ * np.sqrt(2 * np.log(p))) for i in np.unique(groups)])
+        if not root_n_scaled:
+            weight_frac *= np.sqrt(n)
+        if proportion:
+            weights = dict([(i, weight_frac / np.sqrt(proportion) * sigma_ * np.sqrt(2 * np.log(p))) for i in np.unique(groups)])
+        else:
+            weights = dict([(i, weight_frac * sigma_ * np.sqrt(2 * np.log(p))) for i in np.unique(groups)])
+
+        #print("MLE weights:", weights)
         # Don't penalize intercept
         if intercept:
             weights[0] = 0
 
-        prop_scalar = (1 - proportion) / proportion
-
         if randomizer_sd_const == None:
             print("Data Carving Randomization Used")
+            prop_scalar = (1 - proportion) / proportion
             conv = const(X=X,
                          Y=Y,
                          groups=groups,
                          weights=weights,
                          useJacobian=True,
                          ridge_term=0.,
-                         cov_rand=X.T @ X * prop_scalar)
+                         cov_rand=X.T @ X * prop_scalar * (np.std(Y)**2))
         else:
-            mean_diag = np.mean((X ** 2).sum(0))
+            mean_diag = 1#np.mean((X ** 2).sum(0))
             # randomizer_sd_const default to 2.
-            randomizer_scale = np.sqrt(mean_diag) * np.std(Y) * randomizer_sd_const
+            if not root_n_scaled:
+                mean_diag = 1#np.mean((X ** 2 / n).sum(0))
+                randomizer_sd_const *= np.sqrt(n)
+                randomizer_scale = np.sqrt(mean_diag) * randomizer_sd_const * np.std(Y) #* np.sqrt(n)
+            else:
+                randomizer_scale = np.sqrt(mean_diag) * np.std(Y) * randomizer_sd_const
+            print("randomizer scale ^2:", randomizer_scale**2)
+            print("carving diag avg:", np.mean(np.diag(X.T @ X)) * (np.std(Y)**2))
+            print("np.mean(np.diag(X.T @ X)):", np.mean(np.diag(X.T @ X)))
             conv = const(X=X,
                          Y=Y,
                          groups=groups,
@@ -787,7 +818,7 @@ def MLE_inference_inter(X, Y, Y_mean, groups,
                          ridge_term=0.,
                          randomizer_scale=randomizer_scale)
 
-        signs, _ = conv.fit()
+        signs, soln = conv.fit()
         nonzero = signs != 0
         selected_groups = conv.selection_variable['active_groups']
         G_E = len(selected_groups)
@@ -829,9 +860,9 @@ def MLE_inference_inter(X, Y, Y_mean, groups,
             inference_flag = True
         if not inference_flag:
             if not p_val:
-                return None, None, None, None, None
+                return None, None, None, None, None, soln
             else:
-                return None, None, None, None, None, None, None
+                return None, None, None, None, None, None, None, soln
 
         if parallel:
             if not p_val:
@@ -869,12 +900,14 @@ def MLE_inference_inter(X, Y, Y_mean, groups,
                                                       target_ids=target_ids)
 
         if not p_val:
-            return coverages, lengths, selected_interactions, targets, task_idx#target_ids
-        return coverages, lengths, selected_interactions, p_values, pivots, targets, task_idx#target_ids
+            return (coverages, lengths, selected_interactions,
+                    targets, task_idx, soln)#target_ids
+        return (coverages, lengths, selected_interactions,
+                p_values, pivots, targets, task_idx, soln)#target_ids
 
     if not p_val:
-        return None, None, None, None, None
-    return None, None, None, None, None, None, None
+        return None, None, None, None, None, soln
+    return None, None, None, None, None, None, None, soln
 
 
 def plotting(oper_char_df, x_axis='p', hue='method'):
