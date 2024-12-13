@@ -92,7 +92,7 @@ def vary_sparsity(start, end, dir):
     n = 200
     root_n_scaled = False
     main_sig = 2
-    prop = 0.9
+    prop = 0.7
 
     ds_rank_def_count = {size: 0 for size in parameter_list}
 
