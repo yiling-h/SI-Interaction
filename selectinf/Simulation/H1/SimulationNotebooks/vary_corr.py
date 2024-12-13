@@ -172,7 +172,7 @@ def vary_corr(start, end, dir):
                                            soln_cont=beta_hat_ds)
                 noselection_ds = coverages_ds is None
 
-            if not noselection_ds:
+            if not ds_rank_def and not noselection_ds:
                 # Data splitting
                 oper_char["coverage rate"].append(np.mean(coverages_ds))
                 oper_char["avg length"].append(np.mean(lengths_ds))
