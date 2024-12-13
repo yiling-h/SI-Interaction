@@ -74,7 +74,7 @@ def vary_corr(start, end, dir):
     ds_rank_def_count = {corr: 0 for corr in parameter_list}
 
     for rho in parameter_list:
-        for i in range(200):
+        for i in range(start, end):
             np.random.seed(i + 1000)
             # MSE_set = False
 

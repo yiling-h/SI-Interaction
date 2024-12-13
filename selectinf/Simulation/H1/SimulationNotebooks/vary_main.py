@@ -74,7 +74,7 @@ def vary_main(start, end, dir):
     ds_rank_def_count = {main_sig: 0 for main_sig in parameter_list}
 
     for main_sig in parameter_list:
-        for i in range(200):
+        for i in range(start, end):
             np.random.seed(i + 1000)
             # MSE_set = False
 

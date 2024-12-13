@@ -73,7 +73,7 @@ def toy_example(start, end, noise_sd, dir):
     ds_rank_def_count = {prop: 0 for prop in parameter_list}
 
     for prop in parameter_list:
-        for i in range(500):
+        for i in range(start, end):
             np.random.seed(i + 1000)
             # MSE_set = False
 
