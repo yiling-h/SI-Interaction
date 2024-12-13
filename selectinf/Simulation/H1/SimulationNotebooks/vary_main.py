@@ -87,14 +87,14 @@ def vary_main(start, end, dir):
              groups, active, active_inter_adj, active_inter_list, gamma) \
                 = (generate_gaussian_instance_nonlinear_interaction_simple
                    (n=n, p_nl=p_nl, rho=rho, full_corr=False, rho_noise=rho,
-                    SNR=None, main_signal=main_sig, noise_sd=5,
+                    SNR=None, main_signal=main_sig, noise_sd=2,
                     nknots=6, degree=2, interaction_signal=sig,
                     random_signs=False, scale=root_n_scaled, center=False,
                     structure='weakhierarchy', s_interaction=s_inter,
                     intercept=True, active_inter_list=active_inter_list_true,
                     return_gamma=True))
             print("SD(Y): ", np.std(Y))
-            Y_test = Y_mean + np.random.normal(size=(n,), scale=5)
+            Y_test = Y_mean + np.random.normal(size=(n,), scale=2)
 
             # Performing Naive inference using 'all pairs'
             (coverages, lengths, selected_inter, p_values, pivots, targets, idx,
