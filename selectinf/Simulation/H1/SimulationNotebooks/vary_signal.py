@@ -46,7 +46,7 @@ def vary_sparsity(start, end, dir):
     # over all simulation results.
     # Each simulation parameter (here parameter_list contain a list of main signal strengths
     # to be considered) has a corresponding dictionary of results
-    parameter_list = np.array([8, 4, 2, 1])  # np.array([0.5, 2, 5, 10])
+    parameter_list = np.array([10, 8, 4, 2, 1, 0.5])  # np.array([0.5, 2, 5, 10])
     pval_dict = {}
     for x in parameter_list:
         pval_dict[x] = {}
@@ -69,7 +69,7 @@ def vary_sparsity(start, end, dir):
     n = 200
     root_n_scaled = False
     main_sig = 2
-    prop = 0.7
+    prop = 0.9
 
     ds_rank_def_count = {sd_y: 0 for sd_y in parameter_list}
 
