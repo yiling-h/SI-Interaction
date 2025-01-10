@@ -74,7 +74,7 @@ def vary_inter(start, end, dir):
     ds_rank_def_count = {sd_y: 0 for sd_y in parameter_list}
 
     for inter_sig in parameter_list:
-        for i in range(0, 5):
+        for i in range(start, end):
             np.random.seed(i + 1000)
             # MSE_set = False
 
