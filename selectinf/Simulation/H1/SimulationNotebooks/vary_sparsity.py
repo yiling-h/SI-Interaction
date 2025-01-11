@@ -18,7 +18,7 @@ def generate_interactions():
     random.seed(123)
     # Generating active interactions
     active_inter_list_true = np.array([[0, 1], [1, 2], [2, 4], [1, 5], [2, 6]])
-    targeting_sizes = [0, 5, 10, 20]
+    targeting_sizes = [0, 5, 10, 15]
     active_inter_dict = {}
     active_inter_list_dict = {}
     for size in targeting_sizes:
@@ -71,7 +71,7 @@ def vary_sparsity(start, end, dir):
     # over all simulation results.
     # Each simulation parameter (here parameter_list contain a list of main signal strengths
     # to be considered) has a corresponding dictionary of results
-    parameter_list = np.array([0, 5, 10, 20])  # np.array(targeting_sizes)
+    parameter_list = np.array([0, 5, 10, 15])  # np.array(targeting_sizes)
     pval_dict = {}
     for x in parameter_list:
         pval_dict[x] = {}
@@ -83,10 +83,10 @@ def vary_sparsity(start, end, dir):
     active_inter_dict, active_inter_list_dict = generate_interactions()
 
     rho = 0.5  # Correlation of signal covariates (amongst themselves), and noise.
-    sig = 2  # Controlling interaction vs main signals.
+    sig = 1  # Controlling interaction vs main signals.
     # Setting it this way generates comparable main
     # and interaction signals (sig = 2 works )
-    weights = 0.08  # Group Lasso weights
+    weights = 0.3  # Group Lasso weights
     s_inter = 5  # Number of true interactions
     p_nl = 20  # Number of nonlinear covariates
     n = 200
@@ -110,7 +110,7 @@ def vary_sparsity(start, end, dir):
              groups, active, active_inter_adj, active_inter_list, gamma) \
                 = (generate_gaussian_instance_nonlinear_interaction_simple
                    (n=n, p_nl=p_nl, rho=rho, full_corr=False,
-                    rho_noise=rho, block_corr=True, rho_cross=rho * 0.8,
+                    rho_noise=rho, block_corr=True, rho_cross=rho,
                     SNR=None, main_signal=main_sig, noise_sd=2,
                     nknots=6, degree=2, interaction_signal=sig,
                     random_signs=False, scale=root_n_scaled, center=False,
