@@ -83,7 +83,7 @@ def vary_sparsity(start, end, dir):
     active_inter_dict, active_inter_list_dict = generate_interactions()
 
     rho = 0.5  # Correlation of signal covariates (amongst themselves), and noise.
-    sig = 1  # Controlling interaction vs main signals.
+    sig = 2  # Controlling interaction vs main signals.
     # Setting it this way generates comparable main
     # and interaction signals (sig = 2 works )
     weights = 0.3  # Group Lasso weights
