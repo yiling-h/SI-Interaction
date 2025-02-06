@@ -66,7 +66,7 @@ def vary_sparsity(start, end, dir):
     weights = 0.05  # Group Lasso weights
     s_inter = 5  # Number of true interactions
     p_nl = 20  # Number of nonlinear covariates
-    n = 400
+    n = 200
     root_n_scaled = False
     main_sig = 2
     prop = 0.9
