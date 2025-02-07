@@ -59,11 +59,11 @@ def vary_inter(start, end, dir):
 
     # p = 50
     sd_y = 2
-    rho = 0.5  # Correlation of signal covariates (amongst themselves), and noise.
+    rho = 0.6  # Correlation of signal covariates (amongst themselves), and noise.
     # sig = 2  # Controlling interaction vs main signals.
     # Setting it this way generates comparable main
     # and interaction signals (sig = 2 works )
-    weights = 0.08  # Group Lasso weights
+    weights = 0.05  # Group Lasso weights
     s_inter = 5  # Number of true interactions
     p_nl = 20  # Number of nonlinear covariates
     n = 200
@@ -87,6 +87,7 @@ def vary_inter(start, end, dir):
              groups, active, active_inter_adj, active_inter_list, gamma) \
                 = (generate_gaussian_instance_nonlinear_interaction_simple
                    (n=n, p_nl=p_nl, rho=rho, full_corr=False, rho_noise=rho,
+                    block_corr=True, rho_cross=rho * 0.8,
                     SNR=None, main_signal=main_sig, noise_sd=sd_y,
                     nknots=6, degree=2, interaction_signal=inter_sig,
                     random_signs=False, scale=root_n_scaled, center=False,
