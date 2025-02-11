@@ -1,6 +1,7 @@
 import time, sys, joblib, os
 sys.path.append('/home/yilingh/SI-Interaction')
 import multiprocessing as mp
+import random
 
 from selectinf.Simulation.H1.nonlinear_H1_helpers import *
 
@@ -12,6 +13,30 @@ def generate_test(Y_mean, noise_sd):
     Y_test = Y_mean + np.random.normal(size=(n,), scale=noise_sd)
 
     return Y_test
+
+def generate_interactions():
+    random.seed(123)
+    # Generating active interactions
+    active_inter_list_true = np.array([[0, 1], [1, 2], [2, 4], [1, 5], [2, 6]])
+    targeting_sizes = [5, 10, 15, 20]
+    active_inter_dict = {}
+    active_inter_list_dict = {}
+    for size in targeting_sizes:
+        active_inter_dict[size] = active_inter_list_true.copy()
+        active_inter_list_dict[size] = [(x[0], x[1]) for x in active_inter_list_true]
+        for i in range(size):
+            sampled = False
+            while not sampled:
+                # sample first covariate
+                j = random.sample([0, 1, 2], k=1)[0]
+                # sample second covariate
+                k = random.sample(list(range(3, 20)), k=1)[0]
+                if (j, k) not in active_inter_list_dict[size]:
+                    active_inter_dict[size] = np.concatenate((active_inter_dict[size],
+                                                              np.array([[j, k]])), axis=0)
+                    active_inter_list_dict[size].append((j, k))
+                    sampled = True
+    return active_inter_dict, active_inter_list_dict
 
 def vary_inter(start, end, dir):
     # A dictionary recording simulation results and metrics
@@ -54,8 +79,8 @@ def vary_inter(start, end, dir):
 
     # Group lasso solver constructor
     const = group_lasso.gaussian
-    active_inter_list_true = np.array([[0, 1], [1, 2], [2, 4], [1, 5], [2, 6]])
-    active_inter_list_true_list = [(x[0], x[1]) for x in active_inter_list_true]
+    active_inter_dict, active_inter_list_dict = generate_interactions()
+    active_inter_list_true = active_inter_dict[5]
 
     # p = 50
     sd_y = 2

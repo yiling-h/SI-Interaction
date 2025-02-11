@@ -18,7 +18,7 @@ def generate_interactions():
     random.seed(123)
     # Generating active interactions
     active_inter_list_true = np.array([[0, 1], [1, 2], [2, 4], [1, 5], [2, 6]])
-    targeting_sizes = [0, 5, 10, 15]
+    targeting_sizes = [5, 10, 15, 20]
     active_inter_dict = {}
     active_inter_list_dict = {}
     for size in targeting_sizes:
@@ -71,7 +71,7 @@ def vary_sparsity(start, end, dir):
     # over all simulation results.
     # Each simulation parameter (here parameter_list contain a list of main signal strengths
     # to be considered) has a corresponding dictionary of results
-    parameter_list = np.array([0, 5, 10, 15])  # np.array(targeting_sizes)
+    parameter_list = np.array([5, 10, 15, 20])  # np.array(targeting_sizes)
     pval_dict = {}
     for x in parameter_list:
         pval_dict[x] = {}
