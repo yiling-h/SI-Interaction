@@ -16,6 +16,25 @@ from functools import partial
 import copy
 from scipy.stats import norm as ndist
 
+def calculate_F1_score_main(selected, true=[1,2,3]):
+    if not selected:
+        return 0
+    true = set(true)
+    selected = set(selected)
+    selected.discard(0)
+    # Prec = TP / TP + FP
+    # Recall = TP / TP + FN
+    if len(selected) == 0 or len(true) == 0:
+        return 0
+    TP = len(selected.intersection(true))
+    precision = TP / len(selected)
+    recall = TP / len(true)
+    if precision + recall > 0:
+        return 2 * precision * recall / (precision + recall)
+    else:
+        return 0
+
+
 def calculate_F1_score_interactions(true_set, selected_list):
     selected_set = set(selected_list)
     # print(true_set, selected_set)
@@ -361,15 +380,15 @@ def naive_inference_inter(X, Y, groups, Y_mean, const,
                                               target_ids=target_ids)
         #print("Naive Selection Size:", len(selected_interactions))
         if not p_val:
-            return (coverages, lengths, selected_interactions,
+            return (coverages, lengths, selected_groups, selected_interactions,
                     targets, task_idx, soln)#target_ids
         else:
-            return (coverages, lengths, selected_interactions,
+            return (coverages, lengths, selected_groups, selected_interactions,
                     p_values, pivots, targets, task_idx, soln)#target_ids
     if not p_val:
-        return None, None, None, None, None, soln
+        return None, None, selected_groups, None, None, None, soln
     else:
-        return None, None, None, None, None, None, None, soln
+        return None, None, selected_groups, None, None, None, None, None, soln
 
 
 def data_splitting_inter(X, Y, groups, Y_mean, const,
@@ -860,9 +879,9 @@ def MLE_inference_inter(X, Y, Y_mean, groups,
             inference_flag = True
         if not inference_flag:
             if not p_val:
-                return None, None, None, None, None, soln
+                return None, None, selected_groups, None, None, None, soln
             else:
-                return None, None, None, None, None, None, None, soln
+                return None, None, selected_groups, None, None, None, None, None, soln
 
         if parallel:
             if not p_val:
@@ -900,14 +919,14 @@ def MLE_inference_inter(X, Y, Y_mean, groups,
                                                       target_ids=target_ids)
 
         if not p_val:
-            return (coverages, lengths, selected_interactions,
+            return (coverages, lengths, selected_groups, selected_interactions,
                     targets, task_idx, soln)#target_ids
-        return (coverages, lengths, selected_interactions,
+        return (coverages, lengths, selected_groups, selected_interactions,
                 p_values, pivots, targets, task_idx, soln)#target_ids
 
     if not p_val:
-        return None, None, None, None, None, soln
-    return None, None, None, None, None, None, None, soln
+        return None, None, selected_groups, None, None, None, soln
+    return None, None, selected_groups, None, None, None, None, None, soln
 
 
 def plotting(oper_char_df, x_axis='p', hue='method'):
