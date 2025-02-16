@@ -1,10 +1,9 @@
 import time, sys, joblib, os
 
-from selectinf.Simulation.simulation_helpers import calculate_F1_score_main
-
 sys.path.append('/home/yilingh/SI-Interaction')
 import multiprocessing as mp
 
+from selectinf.Simulation.simulation_helpers import calculate_F1_score_main
 from selectinf.Simulation.H1.nonlinear_H1_helpers import *
 
 def predict(beta_hat, X_test):
