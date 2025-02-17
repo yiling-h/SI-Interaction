@@ -3,6 +3,7 @@ sys.path.append('/home/yilingh/SI-Interaction')
 import multiprocessing as mp
 import random
 
+from selectinf.Simulation.simulation_helpers import calculate_F1_score_main
 from selectinf.Simulation.H1.nonlinear_H1_helpers import *
 
 def predict(beta_hat, X_test):
@@ -66,6 +67,11 @@ def vary_inter(start, end, dir):
     target_dict["pivot"] = []
     target_dict["pval"] = []
 
+    F1_dict = {}
+    F1_dict["F1"] = []
+    F1_dict["method"] = []
+    F1_dict["inter signal"] = []
+
     # A dictionary recording p-values for each true interaction
     # over all simulation results.
     # Each simulation parameter (here parameter_list contain a list of main signal strengths
@@ -123,7 +129,7 @@ def vary_inter(start, end, dir):
             Y_test = Y_mean + np.random.normal(size=(n,), scale=sd_y)
 
             # Performing Naive inference using 'all pairs'
-            (coverages, lengths, selected_inter, p_values, pivots, targets, idx,
+            (coverages, lengths, selected_groups, selected_inter, p_values, pivots, targets, idx,
              beta_hat_naive) \
                 = naive_inference_inter(X=design, Y=Y, groups=groups,
                                         Y_mean=Y_mean, const=const,
@@ -219,7 +225,7 @@ def vary_inter(start, end, dir):
             # Continue if data splitting yields a nonempty group lasso selection
             # (this is almost always the case)
             # Performing MLE using 'all pairs'
-            (coverages_MLE, lengths_MLE, selected_inter_MLE, p_values_MLE,
+            (coverages_MLE, lengths_MLE, selected_groups_MLE, selected_inter_MLE, p_values_MLE,
              pivots_MLE, targets_MLE, idx_MLE, beta_hat_MLE) \
                 = (MLE_inference_inter
                    (X=design, Y=Y, Y_mean=Y_mean, groups=groups,
@@ -273,9 +279,25 @@ def vary_inter(start, end, dir):
             MSE_dict["MSE"].append(MSE_MLE)
             MSE_dict["method"].append("MLE")
             MSE_dict["inter signal"].append(inter_sig)
-            MSE_set = True
 
-            joblib.dump([ds_rank_def_count, target_dict, pval_dict, MSE_dict, oper_char],
+            # Set F1
+            F1_naive = calculate_F1_score_main(selected=selected_groups, true=[1, 2, 3])
+            F1_dict["F1"].append(F1_naive)
+            F1_dict["method"].append("Naive")
+            F1_dict["inter signal"].append(inter_sig)
+
+            F1_ds = calculate_F1_score_main(selected=selected_groups_ds, true=[1, 2, 3])
+            F1_dict["F1"].append(F1_ds)
+            F1_dict["method"].append("Data Splitting")
+            F1_dict["inter signal"].append(inter_sig)
+
+            F1_MLE = calculate_F1_score_main(selected=selected_groups_MLE, true=[1, 2, 3])
+            F1_dict["F1"].append(F1_MLE)
+            F1_dict["method"].append("MLE")
+            F1_dict["inter signal"].append(inter_sig)
+
+            joblib.dump([ds_rank_def_count, target_dict, pval_dict, MSE_dict, oper_char,
+                         F1_dict],
                         f'{dir}_{start}_{end}.pkl', compress=1)
 
 if __name__ == '__main__':
