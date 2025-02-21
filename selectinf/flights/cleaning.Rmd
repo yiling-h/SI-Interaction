@@ -1,0 +1,20 @@
+---
+title: "Flights Data Cleaning"
+author: "Codes by Yiling Huang"
+date: "2025-02-21"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(anyflights)
+```
+
+```{r}
+nycflights24_ <- anyflights("JFK", 2024, 1)
+```
+```{r}
+write.csv(nycflights24_$weather, "weather.csv")
+write.csv(nycflights24_$flights, "flights.csv")
+write.csv(nycflights24_$planes, "planes.csv")
+```

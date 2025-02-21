@@ -246,8 +246,8 @@ class b_spline():
 
         # Attach linear part
         if self.data_l is not None:
-            for j in range(self.p_2):
-                self.spline_data = np.hstack([self.spline_data,self.data_l[:, j]])
+            self.p_2 = self.data_l.shape[1]
+            self.spline_data = np.hstack((self.spline_data,self.data_l))
 
         # set group indices for derived covariates based on the original covariate
         for i in range(self.p_1):
@@ -262,7 +262,6 @@ class b_spline():
         # If linear parts are given, set linear parts parameters
         if self.data_l is not None:
             prev_groups = np.unique(self.groups).shape[0]
-            self.p_2 = self.data_l.shape[1]
             for j in range(self.p_2):
                 self.groups.append(prev_groups + j)
             ncol = ncol + self.p_2
