@@ -288,7 +288,7 @@ def naive_inference_inter(X, Y, groups, Y_mean, const,
         ##solve group LASSO with group penalty weights = weights
         weights = dict([(i, weight_frac * sigma_ * np.sqrt(2 * np.log(p))) for i in np.unique(groups)])
 
-        #print("Naive weights:", weights)
+        print("Naive weights:", weight_frac * sigma_ * np.sqrt(2 * np.log(p)))
 
         # Don't penalize intercept
         if intercept:
@@ -309,7 +309,7 @@ def naive_inference_inter(X, Y, groups, Y_mean, const,
         G_E = len(selected_groups)
 
         if solve_only:
-            return nonzero, selected_groups
+            return nonzero, selected_groups, soln
     else:
         nonzero = nonzero_cont
         selected_groups = selected_groups_cont
@@ -446,7 +446,7 @@ def data_splitting_inter(X, Y, groups, Y_mean, const,
         ##solve group LASSO with group penalty weights = weights
         weights = dict([(i, weight_frac * sigma_ * np.sqrt(2 * np.log(p))) for i in np.unique(groups)])
 
-        #print("Data splitting weights:", weights)
+        print(f"Data splitting {proportion} weights:", weight_frac * sigma_ * np.sqrt(2 * np.log(p)))
 
         # Don't penalize intercept
         if intercept:
@@ -843,7 +843,7 @@ def MLE_inference_inter(X, Y, Y_mean, groups,
         G_E = len(selected_groups)
 
         if solve_only:
-            return conv, nonzero
+            return conv, nonzero, selected_groups, soln
     else:
         conv = conv_cont
         nonzero = nonzero_cont

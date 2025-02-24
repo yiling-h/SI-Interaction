@@ -94,7 +94,7 @@ def vary_inter(start, end, dir):
     # sig = 2  # Controlling interaction vs main signals.
     # Setting it this way generates comparable main
     # and interaction signals (sig = 2 works )
-    weights = 0.05  # Group Lasso weights
+    weights = 10  # Group Lasso weights
     s_inter = 5  # Number of true interactions
     p_nl = 20  # Number of nonlinear covariates
     n = 200
@@ -126,6 +126,8 @@ def vary_inter(start, end, dir):
                     intercept=True, active_inter_list=active_inter_list_true,
                     return_gamma=True))
             print("SD(Y): ", np.std(Y))
+            design *= np.sqrt(design.shape[0])
+            design[:, 0] = 1
             Y_test = Y_mean + np.random.normal(size=(n,), scale=sd_y)
 
             # Performing Naive inference using 'all pairs'
