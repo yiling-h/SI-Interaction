@@ -70,7 +70,7 @@ def toy_example(start, end, noise_sd, dir):
     sig = 2    # Controlling interaction vs main signals.
     # Setting it this way generates comparable main
     # and interaction signals (sig = 2 works )
-    weights = 5  # Group Lasso weights
+    weights = 1  # Group Lasso weights
     s_inter = 5  # Number of true interactions
     p_nl = 20  # Number of nonlinear covariates
     n = 200
