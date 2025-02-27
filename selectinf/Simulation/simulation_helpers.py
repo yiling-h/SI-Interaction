@@ -251,7 +251,7 @@ def interaction_t_tests_all_parallel(X_E, Y, Y_mean, n_features, active_vars_fla
 
 
 def naive_inference_inter(X, Y, groups, Y_mean, const,
-                          n_features, interactions, intercept=False,
+                          n_features, interactions, intercept=True,
                           weight_frac=1.25, level=0.9, mode="allpairs",
                           parallel=False, ncores=8,
                           solve_only=False, continued=False,
@@ -392,7 +392,7 @@ def naive_inference_inter(X, Y, groups, Y_mean, const,
 
 
 def data_splitting_inter(X, Y, groups, Y_mean, const,
-                         n_features, interactions, intercept=False,
+                         n_features, interactions, intercept=True,
                          weight_frac=1.25, level=0.9,
                          proportion=0.5, mode="allpairs",
                          parallel=False, ncores=8,
@@ -761,7 +761,7 @@ def interaction_selective_tests_all_parallel(conv, dispersion,
 
 
 def MLE_inference_inter(X, Y, Y_mean, groups,
-                        n_features, interactions, intercept=False,
+                        n_features, interactions, intercept=True,
                         weight_frac=1.25, level=0.9,
                         proportion=None, mode="allpairs",
                         parallel=False, continued=True, solve_only=False,

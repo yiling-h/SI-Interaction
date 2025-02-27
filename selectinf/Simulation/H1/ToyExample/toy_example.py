@@ -70,7 +70,7 @@ def toy_example(start, end, noise_sd, dir):
     sig = 2    # Controlling interaction vs main signals.
     # Setting it this way generates comparable main
     # and interaction signals (sig = 2 works )
-    weights = 2  # Group Lasso weights
+    weights = 3  # Group Lasso weights
     s_inter = 5  # Number of true interactions
     p_nl = 20  # Number of nonlinear covariates
     n = 200
@@ -155,7 +155,7 @@ def toy_example(start, end, noise_sd, dir):
                                        mode='weakhierarchy',
                                        solve_only=True, continued=False,
                                        parallel=False, p_val=True,
-                                       target_ids=None,
+                                       target_ids=None, intercept=True,
                                        root_n_scaled=root_n_scaled)
             if nonzero_ds.sum() + 1 >= n - subset_select_ds.sum():
                 ds_rank_def = True
@@ -172,7 +172,7 @@ def toy_example(start, end, noise_sd, dir):
                                            mode='weakhierarchy',
                                            solve_only=False, continued=True,
                                            parallel=False, p_val=True,
-                                           target_ids=None,
+                                           target_ids=None, intercept=True,
                                            root_n_scaled=root_n_scaled,
                                            subset_cont=subset_select_ds,
                                            nonzero_cont=nonzero_ds,

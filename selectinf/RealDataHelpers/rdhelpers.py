@@ -169,8 +169,14 @@ def naive_inference_real_data(X, Y, raw_data, groups, const,
 
     if not root_n_scaled:
         weight_frac *= np.sqrt(n)
+
+    # Obtain group size
+    unique_elements, counts = np.unique(groups, return_counts=True)
+    group_size = dict(zip(unique_elements, counts))
+
     ##solve group LASSO with group penalty weights = weights
-    weights = dict([(i, weight_frac * sigma_ * np.sqrt(2 * np.log(p))) for i in np.unique(groups)])
+    weights = dict(
+        [(i, weight_frac * np.sqrt(group_size[i]) * sigma_ * np.sqrt(2 * np.log(p))) for i in np.unique(groups)])
 
     # print("Naive weights:", weights)
 
@@ -226,9 +232,10 @@ def naive_inference_real_data(X, Y, raw_data, groups, const,
                                               active_vars_flag, data_interaction,
                                               level=level, mode=mode)
 
-        return (result_dict, nonzero, selected_groups)
+        return (result_dict, nonzero, selected_groups, soln)
     else:
         print("Nothing selected")
+        return (None, None, None, soln)
 
 
 def data_splitting_real_data(X_sel, Y_sel, X_inf, Y_inf, raw_data, groups, const,
@@ -259,8 +266,12 @@ def data_splitting_real_data(X_sel, Y_sel, X_inf, Y_inf, raw_data, groups, const
     if not root_n_scaled:
         weight_frac *= np.sqrt(n1)
 
+    # Obtain group size
+    unique_elements, counts = np.unique(groups, return_counts=True)
+    group_size = dict(zip(unique_elements, counts))
+
     ##solve group LASSO with group penalty weights = weights
-    weights = dict([(i, weight_frac * sigma_ * np.sqrt(2 * np.log(p))) for i in np.unique(groups)])
+    weights = dict([(i, weight_frac * np.sqrt(group_size[i]) * sigma_ * np.sqrt(2 * np.log(p))) for i in np.unique(groups)])
 
     # print("Data splitting weights:", weights)
 
@@ -318,10 +329,11 @@ def data_splitting_real_data(X_sel, Y_sel, X_inf, Y_inf, raw_data, groups, const
                                               interactions=data_interaction,
                                               selection_idx=None,
                                               level=level, mode=mode)
-        return (result_dict, nonzero, selected_groups)
+        return (result_dict, nonzero, selected_groups, soln)
 
     else:
         print("Nothing selected")
+        return (None, None, None, soln)
 
 def MLE_inference_real_data(X, Y, raw_data, groups,
                             n_features, intercept=True,
@@ -345,10 +357,16 @@ def MLE_inference_real_data(X, Y, raw_data, groups,
     ##solve group LASSO with group penalty weights = weights
     if not root_n_scaled:
         weight_frac *= np.sqrt(n)
+
+    # Obtain group size
+    unique_elements, counts = np.unique(groups, return_counts=True)
+    group_size = dict(zip(unique_elements, counts))
+
+    ##solve group LASSO with group penalty weights = weights
     if proportion:
-        weights = dict([(i, weight_frac / np.sqrt(proportion) * sigma_ * np.sqrt(2 * np.log(p))) for i in np.unique(groups)])
+        weights = dict([(i, weight_frac * np.sqrt(group_size[i]) / np.sqrt(proportion) * sigma_ * np.sqrt(2 * np.log(p))) for i in np.unique(groups)])
     else:
-        weights = dict([(i, weight_frac * sigma_ * np.sqrt(2 * np.log(p))) for i in np.unique(groups)])
+        weights = dict([(i, weight_frac * np.sqrt(group_size[i]) * sigma_ * np.sqrt(2 * np.log(p))) for i in np.unique(groups)])
 
     #print("MLE weights:", weights)
     # Don't penalize intercept
@@ -402,7 +420,8 @@ def MLE_inference_real_data(X, Y, raw_data, groups,
                                               X_E, n_features, active_vars_flag,
                                               data_interaction,
                                               level=level, mode=mode)
-        return (result_dict, nonzero, selected_groups)
+        return (result_dict, nonzero, selected_groups, soln)
 
     else:
         print("Nothing selected")
+        return (None, None, None, soln)

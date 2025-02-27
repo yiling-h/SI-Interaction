@@ -178,7 +178,7 @@ def vary_sparsity(start, end, dir):
                                        mode='weakhierarchy',
                                        solve_only=True, continued=False,
                                        parallel=False, p_val=True,
-                                       target_ids=None,
+                                       target_ids=None, intercept=True,
                                        root_n_scaled=root_n_scaled)
             if nonzero_ds.sum() + 1 >= n - subset_select_ds.sum():
                 ds_rank_def = True
@@ -195,7 +195,7 @@ def vary_sparsity(start, end, dir):
                                            mode='weakhierarchy',
                                            solve_only=False, continued=True,
                                            parallel=False, p_val=True,
-                                           target_ids=None,
+                                           target_ids=None, intercept=True,
                                            root_n_scaled=root_n_scaled,
                                            subset_cont=subset_select_ds,
                                            nonzero_cont=nonzero_ds,
