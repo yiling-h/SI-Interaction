@@ -66,7 +66,7 @@ def toy_example(start, end, noise_sd, dir):
     active_inter_list_true_list = [(x[0], x[1]) for x in active_inter_list_true]
 
     # p = 50
-    rho = 0.6  # Correlation of signal covariates (amongst themselves), and noise.
+    rho = 0.4  # Correlation of signal covariates (amongst themselves), and noise.
     sig = 2    # Controlling interaction vs main signals.
     # Setting it this way generates comparable main
     # and interaction signals (sig = 2 works )
