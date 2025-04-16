@@ -25,65 +25,129 @@ def plot_ecdf(data):
     plt.show()
 
 
-# %%
 def plot_ecdfs(data_dict, xaxis=None, title=None):
     """
-    Plot an ECDF for each rho value with different methods overlayed.
+    Plot an ECDF for each rho value with different methods overlayed, using a single shared legend.
 
     Parameters:
     - data_dict: dict, a nested dictionary with structure {rho: {method: [values]}}
     """
-
+    # Define colors for each method
     my_palette = {"MLE": "#48c072",
                   "Naive": "#fc5a50",
                   "Data Splitting": "#03719c"}
 
     def ecdf(data):
         """Compute ECDF for a one-dimensional array of measurements."""
-        # Number of data points
         n = len(data)
-        # x-data for the ECDF
         x = np.sort(data)
-        # y-data for the ECDF
         y = np.arange(1, n + 1) / n
         return x, y
 
-    # Number of rho values
     num_rho = len(data_dict)
+    # Create subplots
+    fig, axes = plt.subplots(1, num_rho, figsize=(4 * num_rho, 4), facecolor="w")
+    # In case there's only one subplot, wrap it in a list for consistency.
+    if num_rho == 1:
+        axes = [axes]
 
-    # Create a figure
-    plt.figure(figsize=(4 * num_rho, 4))
-
-    # Loop through each rho
-    for i, (signal, methods) in enumerate(data_dict.items(), 1):
-        # Create a subplot for each rho
-        ax = plt.subplot(1, num_rho, i)
-        # Loop through each method within this rho
+    # Plot ECDFs in each subplot
+    for ax, (signal, methods) in zip(axes, data_dict.items()):
         for method, values in methods.items():
-            # Calculate ECDF
+            # Map "MLE" to "Proposed"
+            label = "Proposed" if method == "MLE" else method
             x, y = ecdf(values)
-            # Plot ECDF
-            ax.plot(x, y, label=f'Method: {method}', marker='.', linestyle='none',
-                    color=my_palette[method])
+            ax.plot(x, y, marker='.', linestyle='none',
+                    color=my_palette[method], label=label)
 
-        # Plot y=x line
-        max_value = max(max(values) for values in methods.values())  # Get maximum value across all methods
+        # Plot reference line y = x
+        max_value = max(max(vals) for vals in methods.values())
         ax.plot([0, max_value], [0, 1], 'k--', label='y=x')
 
-        # Setting plot titles and labels
-        ax.set_title('ECDF for ' + xaxis + f' = {signal}')
-        ax.set_xlabel('Value')
-        ax.set_ylabel('ECDF')
-        # Add legend
-        ax.legend()
+        # Set subplot title and axes labels
+        ax.set_title(f'{xaxis} = {signal}', fontsize=16)
+        ax.set_xlabel('x', fontsize=16)
+        ax.set_ylabel(r'$\widehat{F}(x)$', fontsize=16)
+        # Make the current subplot square: one unit on x is equal to one unit on y.
+        ax.set_aspect('equal', adjustable='box')
+        ax.tick_params(axis='both', which='major', labelsize=14)
+        ax.grid(True)
+
+    # Extract legend handles and labels from one axis (e.g., the first one)
+    handles, labels = axes[0].get_legend_handles_labels()
+
+    # Remove duplicates while preserving order.
+    seen = set()
+    unique_handles_labels = []
+    for handle, label in zip(handles, labels):
+        if label not in seen:
+            unique_handles_labels.append((handle, label))
+            seen.add(label)
+    unique_handles, unique_labels = zip(*unique_handles_labels)
+
+    # Create a single, global legend
+    fig.legend(unique_handles, unique_labels, loc='upper center', ncol=len(unique_labels),
+               fontsize=16, title_fontsize=16,
+               bbox_to_anchor=(0.5, 0.0))
 
     if title is not None:
-        plt.suptitle(title)
-    # Adjust layout to prevent overlap
-    plt.tight_layout()
-    # Show plot
+        fig.suptitle(title, fontsize=16)
+
+    # Adjust layout so that the legend and title don't overlap with subplots
+    plt.tight_layout(rect=[0, 0, 1, 0.95])
+    plt.style.use('default')
+    #
     plt.show()
 
+
+def F1_and_len(oper_char_full_df, F1_dict_full_df, xlabel, xaxis):
+    # Suppose you have two dataframes (or two subsets of your data)
+    # Here, I'm using oper_char_full_df for the first plot and oper_char_subset_df for the second.
+    # If you use the same dataframe for both, adjust accordingly.
+
+    # Define the palette
+    my_palette = {"Proposed": "#48c072",
+                  "Naive": "#fc5a50",
+                  "Data Splitting": "#03719c"}
+
+    # Create a figure with two subplots (side by side)
+    fig, axes = plt.subplots(1, 2, figsize=(12, 5))
+
+    # First pointplot on the left subplot:
+    sns.pointplot(x=oper_char_full_df[xaxis],
+                  y=oper_char_full_df["avg length"],
+                  hue=oper_char_full_df["method"],
+                  markers='o',
+                  palette=my_palette,
+                  ax=axes[0],
+                  legend=True)  # Disable automatic legend
+
+    # Second pointplot on the right subplot:
+    sns.pointplot(x=F1_dict_full_df[xaxis],
+                  y=F1_dict_full_df["F1"],
+              hue=F1_dict_full_df["method"], markers='o',
+              palette=my_palette,
+                  ax=axes[1],
+                  legend=False)
+
+    axes[0].set_ylabel("Average Length")
+    axes[0].set_xlabel(f"{xlabel}")
+    axes[1].set_ylabel("F1 score")
+    axes[1].set_xlabel(f"{xlabel}")
+
+    # Now, create a single global legend.
+    # We'll extract the handles and labels from one of the axes (since both share the same palette & labels).
+    handles, labels = axes[0].get_legend_handles_labels()
+    # Remove the legend from the first subplot (so it doesn't appear there)
+    axes[0].legend_.remove()
+
+    # Place the legend above the subplots, centered horizontally.
+    fig.legend(handles, labels, loc='upper center', ncol=len(labels),
+               title="Method", bbox_to_anchor=(0.5, 0), fontsize=12, title_fontsize=12)
+
+    # Adjust layout so that subplots and the global legend don’t overlap.
+    plt.tight_layout(rect=[0, 0, 1, 0.9])
+    plt.show()
 
 # %%
 def point_plot_multimetrics(oper_char_df, x_axis='p', hue='method', plot_size=False,
