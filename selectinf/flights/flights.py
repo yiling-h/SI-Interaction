@@ -1,7 +1,7 @@
 import pandas as pd
 import numpy as np
 import sys, os
-sys.path.append('/home/yilingh/SI-Interaction/selectinf/flights/')
+sys.path.append('/home/yilingh/SI-Interaction')
 from datetime import datetime
 import matplotlib.pyplot as plt
 import seaborn as sns
